@@ -1,5 +1,5 @@
 [project]
-name = "password-manager"
+name = "passlair"
 version = "0.1.0"
 description = "Library to help you build your password manager"
 readme = "README.md"
@@ -7,8 +7,16 @@ authors = [
     { name = "Adam Sarga", email = "vronst@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "sqlalchemy>=2.0.49",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.14,<0.12.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+test = [
+    "pytest>=9.0.3",
+    "pytest-mock>=3.15.1",
+]
