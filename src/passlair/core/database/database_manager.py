@@ -5,7 +5,7 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
-from ...metaclasses import SingletonMeta
+from ...base import SingletonMeta
 
 
 class DatabaseManager(metaclass=SingletonMeta):
