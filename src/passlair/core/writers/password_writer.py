@@ -1,16 +1,16 @@
 import os
 
-from ...abstract.base_repository import BaseRepository
+from ...base.base_repository import BaseRepository
+from ..auth.user_manager import UserManager
 from ..database.database_manager import db
-from ..models.pass_storage import VaultEntry
-from .user_manager import UserManager
+from ..models.vault_entry import VaultEntry
 
 
 class PasswordSaver(BaseRepository):
     def __init__(self, user: UserManager):
         self.user = user
 
-    def save_password(self, service: str, login: str, password: bytearray) -> bool:
+    def save_password(self, service: str, login: str, password: str) -> bool:
         if (dek := self.user.get_session_key()) is None:
             raise ValueError("User session expired")
 
@@ -21,9 +21,11 @@ class PasswordSaver(BaseRepository):
             "password": password,
             "encrypted_password": encrypted_password,
         }
-        entry = self._add_or_update(self, data)
+        if not (entry := self._add_or_update(data)):
+            return False
         with db.session() as session:
             session.add(entry)
+            session.commit()
 
         return True
 
@@ -35,12 +37,18 @@ class PasswordSaver(BaseRepository):
         if entry is None:
             new_entry = self._new_password(data)
         else:
-            new_entry = self._update_password(data)
+            new_entry = self._update_password(data, entry)
 
         return new_entry
 
-    def _update_password(self, data) -> VaultEntry:
-        pass
+    def _update_password(self, data: dict, entry: VaultEntry) -> VaultEntry:
+        encrypted_password, nonce = self._encrypt_password(
+            data["password"], self.user.get_session_key()
+        )
+        entry.encrypted_password = encrypted_password
+        entry.login = data["login"]
+        entry.nonce = nonce
+        return entry
 
     def _new_password(self, data) -> VaultEntry:
         new_pass = VaultEntry(
@@ -52,11 +60,9 @@ class PasswordSaver(BaseRepository):
         )
         return new_pass
 
-    def _encrypt_password(
-        self, password: bytearray, dek: bytearray
-    ) -> tuple[bytearray, bytes]:
+    def _encrypt_password(self, password: str, dek: str) -> tuple[bytearray, bytes]:
         nonce = os.urandom(12)
         encrypted_password = (
-            TODO  # FIXME: function crypting password with nonce and dek
+            # TODO  # FIXME: function crypting password with nonce and dek
         )
         return encrypted_password, nonce

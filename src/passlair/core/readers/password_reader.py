@@ -14,7 +14,7 @@ class PasswordReader(BaseRepository):
 
         return self._decrypt_password(encrypted_password, self.user.get_session_key())
 
-    def _decrypt_password(self, vault: VaultEntry, dek: bytearray) -> dict:
+    def _decrypt_password(self, vault: VaultEntry, dek: str) -> dict:
         encrypted_password = vault.encrypted_password
         nounce = vault.nonce
         login = vault.login

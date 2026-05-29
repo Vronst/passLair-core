@@ -16,6 +16,5 @@ class StandardUser(Base):
         String(150), unique=True, nullable=False, index=True
     )
 
-    # Store the Argon2id/PBKDF2 hash of the master password strictly for vault authentication
     master_password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     encryption_salt: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)

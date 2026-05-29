@@ -1,20 +1,35 @@
-from ...base.base_repository import BaseRepository
-from ..database.database_manager import db
 from ..models.standard_user import StandardUser
+from ..readers.user_reader import UserReader
 
 
 class UserManager:
     def __init__(self):
-        self.__dek: bytearray | None = None
-        self.user_id: bytearray | None = None
+        self.__dek: str | None = None
+        self.user_id: str | None = None
 
-    def login(self, username: str, password_bytes: bytearray):
+    def login(self, username: str, password: str) -> bool:
         """
         Validates user credentials and sets up the temporary session key.
-        Takes password_bytes as a mutable bytearray so we can control its lifecycle.
         """
-        # FIXME: override it to your lib
-        pass
+        if self.user_id is not None:
+            raise RuntimeError("User already logged in!")
+
+        if (user := self._verify_password(username, password)):
+            self.user_id = user.id
+            self.__dek = # TODO: get dek
+            return True
+        return False
+
+    def _verify_password(self, username: str, password: str) -> StandardUser | None:
+        user = UserReader.get_user_by_name(username)
+        if not user:
+            return
+        encrypted_password: str = user.master_password_hash
+        salt = user.encryption_salt
+        # TODO: decryption
+        if password == decrypted_password:
+            ...
+        return None
 
     def logout(self):
         if self.__session:
@@ -23,26 +38,8 @@ class UserManager:
             self.__session = None
         self.user_id = None
 
-    def get_session_key(self) -> bytearray:
+    def get_session_key(self) -> str:
         """Returns the DEK for the short duration of a vault decryption action."""
         if not self.__dek:
             raise PermissionError("No active secure session. Please log in.")
         return self.__dek
-
-    def
-            input_auth_hash = TODO  # FIXME: hash inputed password
-            if not TODO:  # FIXME: compare passwords
-                return False
-
-            # 4. Login successful! Derive the Data Encryption Key (DEK)
-            # We use a slightly altered process so the login hash != encryption key
-            raw_session = TODO  # FIXME: create session
-            # Store the DEK as a mutable bytearray for decryption tasks later
-            self._session_dek = bytearray(raw_session)
-            self.current_user_id = user.id
-            return True
-
-        finally:
-            if password_bytes:
-                for i in range(len(password_bytes)):
-                    password_bytes[i] = 0
