@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from sqlalchemy import LargeBinary, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,6 +16,6 @@ class VaultEntry(Base):
     user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
 
     service_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    login: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    login: Mapped[str] = mapped_column(String(255), nullable=True)
     encrypted_password: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     nonce: Mapped[bytes] = mapped_column(LargeBinary(12), nullable=False)

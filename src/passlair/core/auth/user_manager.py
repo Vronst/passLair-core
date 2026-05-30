@@ -14,9 +14,9 @@ class UserManager:
         if self.user_id is not None:
             raise RuntimeError("User already logged in!")
 
-        if (user := self._verify_password(username, password)):
+        if user := self._verify_password(username, password):
             self.user_id = user.id
-            self.__dek = # TODO: get dek
+            self.__dek = ...  # TODO: get dek
             return True
         return False
 
@@ -26,17 +26,16 @@ class UserManager:
             return
         encrypted_password: str = user.master_password_hash
         salt = user.encryption_salt
-        # TODO: decryption
+        decrypted_password = ...  # TODO: decryption
         if password == decrypted_password:
             ...
         return None
 
-    def logout(self):
-        if self.__session:
-            for i in range(len(self.__session)):
-                self.__session[i] = 0
+    def logout(self) -> None:
+        if self.__dek and self.user_id:
             self.__session = None
-        self.user_id = None
+            self.user_id = None
+        raise RuntimeError("Tried login out when not loged.")
 
     def get_session_key(self) -> str:
         """Returns the DEK for the short duration of a vault decryption action."""

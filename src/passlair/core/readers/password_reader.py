@@ -18,10 +18,8 @@ class PasswordReader(BaseRepository):
         encrypted_password = vault.encrypted_password
         nounce = vault.nonce
         login = vault.login
-
-        TODO  # FIXME: Decrypt password with DEK and nounce
-
-        return {"login": login, "password": password}
+        decrypted_password = ...  # TODO  # FIXME: Decrypt password with DEK and nounce
+        return {"login": login, "password": decrypted_password}
 
     def _retrieve_password(self, service) -> VaultEntry | None:
         password = self._fetch_row(
