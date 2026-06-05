@@ -9,6 +9,8 @@ from ..models.vault_entry import VaultEntry
 
 class PasswordWriter(BaseRepository):
     def __init__(self, user: UserManager):
+        if not isinstance(user, UserManager):
+            raise TypeError("Invalid UserManager argument on init.")
         self.user = user
 
     def save_password(self, service: str, login: str, password: str) -> bool:
@@ -41,7 +43,7 @@ class PasswordWriter(BaseRepository):
     def _add_or_update(self, data: PasswordCreation) -> VaultEntry:
         entry = self._fetch_row(
             VaultEntry,
-            filters={"service": data["service"], "user_id": self.user.user_id},
+            filters={"service": data["service_name"], "user_id": self.user.user_id},
         )
         if entry is None:
             new_entry = self._new_password(data)
@@ -51,18 +53,15 @@ class PasswordWriter(BaseRepository):
         return new_entry
 
     def _update_password(self, data: PasswordCreation, entry: VaultEntry) -> VaultEntry:
-        encrypted_password, nonce = self._encrypt_password(
-            data["password"], self.user.get_session_key()
-        )
-        entry.encrypted_password = encrypted_password
+        entry.encrypted_password = data["encrypted_password"]
         entry.login = data["login"]
-        entry.nonce = nonce
+        entry.nonce = data["nonce"]
         return entry
 
     def _new_password(self, data) -> VaultEntry:
         new_pass = VaultEntry(
             user_id=self.user.user_id,
-            service=data["service"],
+            service_name=data["service_name"],
             login=data["login"],
             nonce=data["nonce"],
             encrypted_password=data["encrypted_password"],
@@ -70,6 +69,8 @@ class PasswordWriter(BaseRepository):
         return new_pass
 
     def _encrypt_password(self, password: str, dek: str) -> tuple[bytearray, bytes]:
+        if not isinstance(dek, str) or dek == "":
+            raise ValueError("Session key is invalid!")
         nonce = os.urandom(12)
         encrypted_password = ...  # TODO: function crypting password with nonce and dek
         return encrypted_password, nonce

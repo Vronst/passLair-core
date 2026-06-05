@@ -1,6 +1,10 @@
+from typing import TYPE_CHECKING
+
 from ...base.base_repository import BaseRepository
-from ..auth.user_manager import UserManager
 from ..models.vault_entry import VaultEntry
+
+if TYPE_CHECKING:
+    from ..auth.user_manager import UserManager
 
 
 class PasswordReader(BaseRepository):
