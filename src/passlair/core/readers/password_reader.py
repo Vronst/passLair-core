@@ -1,14 +1,14 @@
-from typing import TYPE_CHECKING
+from typing_extensions import Type
 
+from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.base_repository import BaseRepository
 from ..models.vault_entry import VaultEntry
 
-if TYPE_CHECKING:
-    from ..auth.user_manager import UserManager
-
 
 class PasswordReader(BaseRepository):
-    def __init__(self, user: UserManager):
+    def __init__(self, user: AuthenticatedUser):
+        if not isinstance(user, AuthenticatedUser):
+            raise TypeError("Invalid authentication class used on init")
         self.user = user
 
     def get_pass_for(self, service: str) -> dict:

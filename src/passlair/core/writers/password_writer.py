@@ -1,15 +1,15 @@
 import os
 
+from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.base_repository import BaseRepository
 from ...dataclasses.password_data import PasswordCreation
-from ..auth.user_manager import UserManager
 from ..database.database_manager import db
 from ..models.vault_entry import VaultEntry
 
 
 class PasswordWriter(BaseRepository):
-    def __init__(self, user: UserManager):
-        if not isinstance(user, UserManager):
+    def __init__(self, user: AuthenticatedUser):
+        if not isinstance(user, AuthenticatedUser):
             raise TypeError("Invalid UserManager argument on init.")
         self.user = user
 
