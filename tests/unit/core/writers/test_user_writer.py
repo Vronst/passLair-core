@@ -26,6 +26,9 @@ class TestPositive:
 
             mock_session.commit.assert_called_once()
 
+    def test_password_reset(self, mock_user_manager, mock_user_data):
+        writer = UserWriter(mock_user_manager)
+
 
 class TestNegative:
     def test_save_user_raises_exception_if_username_taken(

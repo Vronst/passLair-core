@@ -12,6 +12,12 @@ class UserManager(AuthenticatedUser):
     def user_id(self) -> str | None:
         return self.__user_id
 
+    @property
+    def login_status(self) -> bool:
+        if self.__dek and self.__user_id:
+            return True
+        return False
+
     def login(self, username: str, password: str) -> bool:
         """
         Validates user credentials and sets up the temporary session key.

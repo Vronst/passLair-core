@@ -13,8 +13,22 @@ class DatabaseManager(metaclass=SingletonMeta):
         self._engine = None
         self._session_factory = None
 
-    def init_sqlite(self, filepath: str | None = None):
+    def _reinit_check(self, force: bool = False) -> bool:
+        if self._engine:
+            if not force:
+                return False
+
+            if self._session_factory:
+                self._session_factory.remove()
+
+            self._engine.dispose()
+        return True
+
+    def init_sqlite(self, filepath: str | None = None, *, force: bool = False):
         """Initializes a local SQLite database configuration."""
+        if not self._reinit_check(force):
+            return
+
         filepath = filepath or str(Path(__file__).parents[4] / "passLair_db.db")
         database_url = f"sqlite:///{filepath}"
 
@@ -24,13 +38,22 @@ class DatabaseManager(metaclass=SingletonMeta):
         self._setup_factory()
 
     def init_mariadb(
-        self, username: str, password_str: str, host: str, port: int, database: str
+        self,
+        username: str,
+        password_str: str,
+        host: str,
+        port: int,
+        database: str,
+        *,
+        force: bool = False,
     ):
         """Initializes a networked MariaDB database configuration using the pymysql driver."""
         # URL Format: mariadb+pymysql://user:pass@host:port/dbname
         database_url = (
             f"mariadb+pymysql://{username}:{password_str}@{host}:{port}/{database}"
         )
+        if not self._reinit_check(force):
+            return
 
         self._engine = create_engine(
             database_url,
