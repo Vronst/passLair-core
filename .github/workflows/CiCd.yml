@@ -9,6 +9,14 @@ on:
   pull_request:
     types: [opened, edited, synchronize]
 
+permissions:
+  pull-requests: write # For Job 1 (Labeler) & Job 4 (Auto-PR)
+  contents: write # For Job 6 (Releases)
+  statuses: write # For commit status checks
+  packages: read # For Job 2 (Linter package fetching)
+  pages: write # For Job 5 (GitHub Pages deployment)
+  id-token: write # For Job 5 (OIDC authentication token)
+
 jobs:
   # 1. PR Labeling: Runs only when PRs are opened/edited
   pr-labeling:
@@ -26,9 +34,10 @@ jobs:
     uses: Vronst/workflows/.github/workflows/test.yml@main
     with:
       runner_type: "local"
-      test_command: "uv run pytest && cargo test"
+      test_command: "uv run --group test pytest && cargo test"
       setup_command: |
         pip install uv
+        uv sync
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
