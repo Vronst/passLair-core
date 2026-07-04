@@ -1,6 +1,5 @@
 import pytest
 
-from passlair.core.database.database_manager import DatabaseManager
 from passlair.core.database.database_manager import db as original_db
 
 
@@ -20,5 +19,4 @@ def reset_database_singleton():
 
 @pytest.fixture()
 def db():
-    original_db.init_sqlite(":memory:", force=True)
     return original_db
