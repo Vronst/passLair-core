@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from ...base import SingletonMeta
+from ..models.base import Base
 
 
 class DatabaseManager(metaclass=SingletonMeta):
@@ -36,6 +37,7 @@ class DatabaseManager(metaclass=SingletonMeta):
             database_url, connect_args={"check_same_thread": False}
         )
         self._setup_factory()
+        self.create_tables(Base.metadata)
 
     def init_mariadb(
         self,
@@ -63,6 +65,7 @@ class DatabaseManager(metaclass=SingletonMeta):
             pool_pre_ping=True,  # Checks if connection is alive before issuing queries
         )
         self._setup_factory()
+        self.create_tables(Base.metadata)
 
     def _setup_factory(self):
         """Internal helper to tie the engine to the session factories."""

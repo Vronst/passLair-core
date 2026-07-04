@@ -42,7 +42,7 @@ class Authentication(BaseFacade):
     ) -> FacadeResult:
         pass
 
-    def reset_user_password(self, new_password: str) -> FacadeResult:
+    def reset_user_password(self, user_id: str) -> FacadeResult:
         pass
 
     def register_user(self, login: str, password: str) -> FacadeResult:
