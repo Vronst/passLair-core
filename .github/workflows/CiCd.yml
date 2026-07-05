@@ -21,17 +21,17 @@ jobs:
   # 1. PR Labeling: Runs only when PRs are opened/edited
   pr-labeling:
     if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'edited')
-    uses: Vronst/workflows/.github/workflows/autolabel.yml@main
+    uses: Vronst/workflows/.github/workflows/autolabel.yml@custom
 
   # 2. Linting: Runs on normal branch pushes and PRs
   linting:
     if: github.ref_type != 'tag'
-    uses: Vronst/workflows/.github/workflows/lint.yml@main
+    uses: Vronst/workflows/.github/workflows/lint.yml@custom
 
   # 3. Testing: Runs on normal branch pushes and PRs
   testing:
     if: github.ref_type != 'tag'
-    uses: Vronst/workflows/.github/workflows/test.yml@main
+    uses: Vronst/workflows/.github/workflows/test.yml@custom
     with:
       runner_type: "local"
       test_command: "uv run --group test pytest && cargo test"
@@ -45,7 +45,7 @@ jobs:
   auto-pr-generation:
     needs: [linting, testing]
     if: github.event_name == 'push' && github.ref == 'refs/heads/stage'
-    uses: Vronst/workflows/.github/workflows/cd.yml@main
+    uses: Vronst/workflows/.github/workflows/cd.yml@custom
     with:
       head: "stage"
       base: "main"
@@ -58,9 +58,9 @@ jobs:
   documentation:
     needs: [linting, testing]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: Vronst/workflows/.github/workflows/docs.yml@main
+    uses: Vronst/workflows/.github/workflows/docs.yml@custom
 
   # 6. Release Job: Runs ONLY when a version tag is pushed
   release:
     if: github.ref_type == 'tag'
-    uses: Vronst/workflows/.github/workflows/release.yml@main
+    uses: Vronst/workflows/.github/workflows/release.yml@custom
