@@ -6,7 +6,7 @@ from passlair.core.models.standard_user import StandardUser
 
 @pytest.fixture(autouse=True)
 def set_up_db():
-    original_db.init_sqlite(":memeory:")
+    original_db.init_sqlite(":memory:")
     return original_db
 
 
