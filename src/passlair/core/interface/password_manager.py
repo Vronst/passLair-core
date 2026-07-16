@@ -1,3 +1,4 @@
+# This is core Facade, so this only wraps core functions, updating password etc should be in WEB or CLI
 from ...dataclasses.facade_result import FacadeResult
 from ...base.abstract.base_facade import BaseFacade
 from ...base.abstract.authenticated_user import AuthenticatedUser
@@ -6,7 +7,7 @@ from ..writers.password_writer import PasswordWriter
 
 
 class PasswordManager(BaseFacade):
-    def __init__(self, auth: AuthenticatedUser)
+    def __init__(self, auth: AuthenticatedUser):
         self.auth = auth
         self.pass_reader = PasswordReader(auth)
         self.pass_writer = PasswordWriter(auth)
