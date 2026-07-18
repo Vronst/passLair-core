@@ -1,3 +1,5 @@
+from sqlalchemy.exc import IntegrityError
+
 from ...base.base_repository import BaseRepository
 from ...dataclasses.user_data import UserCreation
 from ..auth.user_manager import UserManager
@@ -20,9 +22,25 @@ class UserWriter(BaseRepository):
 
     @classmethod
     def save_user(cls, data: UserCreation) -> None:
-        if cls._fetch_row(StandardUser, filters={"username": data.username}):
-            raise ValueError("Username already exists")
+        """
+        Attempts to write the user directly to the database.
+        Catches database integrity constraints to bubble up clean errors.
+
+        Args:
+            data (UserCreation): The user data to save.
+        """
         entry = StandardUser(**data.model_dump())
-        with db.session() as session:
-            session.add(entry)
-            session.commit()
+
+        try:
+            with db.session() as session:
+                session.add(entry)
+                session.commit()
+        except IntegrityError as e:
+            error_msg = str(e.orig).lower()
+
+            if "username" in error_msg:
+                raise ValueError("Username already exists")
+            elif "email" in error_msg:
+                raise ValueError("Email already exists")
+
+            raise ValueError("User registration failed: Duplication error.")

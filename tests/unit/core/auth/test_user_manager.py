@@ -57,7 +57,7 @@ class TestPositive:
             test_data = manager._verify_password(username, password)
 
         assert test_data
-        assert test_data.encryption_salt == "salt"
+        assert test_data.salt == "salt"
         mock.assert_called_once_with(username)
 
 

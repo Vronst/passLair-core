@@ -30,8 +30,8 @@ def mock_user():
     """Generates StandarUser mock for tests."""
     mock = MagicMock(spec=StandardUser)
     mock.id = "secret_id"
-    mock.master_password_hash = "some_password"
-    mock.encryption_salt = "salt"
+    mock.master_password= "some_password"
+    mock.salt = "salt"
     return mock
 
 

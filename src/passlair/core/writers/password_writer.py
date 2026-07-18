@@ -1,4 +1,7 @@
+from ast import Pass
 import os
+
+from passlair_crypto.package import encrypt_password
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.base_repository import BaseRepository
@@ -58,19 +61,13 @@ class PasswordWriter(BaseRepository):
         entry.nonce = data["nonce"]
         return entry
 
-    def _new_password(self, data) -> VaultEntry:
-        new_pass = VaultEntry(
-            user_id=self.user.user_id,
-            service_name=data["service_name"],
-            login=data["login"],
-            nonce=data["nonce"],
-            password=data["password"],
-        )
+    def _new_password(self, data: PasswordCreation) -> VaultEntry:
+        new_pass = VaultEntry(**data.model_dump())
         return new_pass
 
-    def _encrypt_password(self, password: str, dek: str) -> tuple[str, str]:
+    def _encrypt_password(self, password: str, dek: str) -> tuple[str, bytes]:
         if not isinstance(dek, str) or dek == "":
             raise ValueError("Session key is invalid!")
         nonce = os.urandom(12)
-        encrypted_password = ...  # TODO: function crypting password with nonce and dek
+        encrypted_password = encrypt_password(password, nonce, dek)  # TODO: function crypting password with nonce and dek
         return encrypted_password, nonce

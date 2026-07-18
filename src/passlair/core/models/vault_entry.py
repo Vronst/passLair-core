@@ -38,4 +38,4 @@ class VaultEntry(Base):
     service_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     login: Mapped[str] = mapped_column(String(255), nullable=True)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
-    nonce: Mapped[str] = mapped_column(String(255), nullable=False)
+    nonce: Mapped[bytes] = mapped_column(LargeBinary(12), nullable=False)

@@ -6,4 +6,4 @@ class PasswordCreation(Base):
     service_name: str
     login: str
     password: str
-    nonce: str
+    nonce: bytes

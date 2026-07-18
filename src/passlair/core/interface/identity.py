@@ -54,5 +54,21 @@ class Identity(BaseFacade):
         pass
 
     def register_user(self, login: str, email: str, password: str) -> FacadeResult:
+        """
+        Registers a new user by saving their data and logging them in.
 
+        Args:
+            login (str): The username of the new user.
+            email (str): The email of the new user.
+            password (str): The password of the new user.
+
+        Returns:
+            FacadeResult: A success or failure result indicating the outcome of the registration.
+        """
         user = UserCreation(username=login, email=email, master_password=password, salt='temp')
+        try:
+            self.user_writer.save_user(user)
+            self.manager.login(login, password)
+            return self._success("User registered successfully.")
+        except ValueError as e:
+            return self._failure(str(e))

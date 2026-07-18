@@ -18,3 +18,4 @@ class StandardUser(Base):
     email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False, index=True)
     master_password: Mapped[str] = mapped_column(String(255), nullable=False)
     salt: Mapped[str] = mapped_column(String(18), nullable=False)
+    dek: Mapped[str] = mapped_column(String(255), nullable=False)
