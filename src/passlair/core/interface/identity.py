@@ -2,16 +2,24 @@
 
 from typing import TYPE_CHECKING
 
+from ...dataclasses.user_data import UserCreation
 from ...base.abstract.base_facade import BaseFacade
 from ..auth.user_manager import UserManager
+from ..readers.user_reader import UserReader
+from ..writers.user_writer import UserWriter
+
 
 if TYPE_CHECKING:
     from ...dataclasses.facade_result import FacadeResult
 
 
-class Authentication(BaseFacade):
-    def __init__(self):
-        self.manager = UserManager()
+class Identity(BaseFacade):
+    def __init__(self,
+        user_manager: UserManager | None = None,
+        user_writer: UserWriter | None = None
+    ):
+        self.manager = user_manager or UserManager()
+        self.user_writer = user_writer
 
     @property
     def login_status(self) -> FacadeResult:
@@ -45,5 +53,6 @@ class Authentication(BaseFacade):
     def reset_user_password(self, user_id: str) -> FacadeResult:
         pass
 
-    def register_user(self, login: str, password: str) -> FacadeResult:
-        pass
+    def register_user(self, login: str, email: str, password: str) -> FacadeResult:
+
+        user = UserCreation(username=login, email=email, master_password=password, salt='temp')

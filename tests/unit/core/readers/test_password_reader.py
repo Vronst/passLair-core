@@ -11,7 +11,7 @@ data = {
     "service_name": "test_service",
     # "user_id ": "string_id",
     "login": "my_login",
-    "encrypted_password": b"encrypted_pass",
+    "password": b"encrypted_pass",
     "nonce": b"12",
 }
 entry = VaultEntry(**data)

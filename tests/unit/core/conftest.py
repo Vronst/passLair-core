@@ -21,7 +21,7 @@ def mock_db_session():
 def mock_user_data():
     """Generates standard user data for validation tests."""
     return UserCreation(
-        username="test_user", password="secure_password", salt=b"random_salt_bytes"
+        username="test_user", email="test@example.com", master_password="secure_password", salt="random_salt"
     )
 
 

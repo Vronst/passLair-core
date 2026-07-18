@@ -20,7 +20,7 @@ class TestPositive:
 
             # Assertions
             mock_fetch.assert_called_once_with(
-                StandardUser, filters={"master_username": mock_user_data.username}
+                StandardUser, filters={"username": mock_user_data.username}
             )
             mock_session.add.assert_called_once()
 

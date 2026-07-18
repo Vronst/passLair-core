@@ -20,9 +20,10 @@ def register_user():
         dict
     """
     data = {
-        "master_username": "test_user",
-        "master_password_hash": "password",
-        "encryption_salt": b"salt",
+        "username": "test_user",
+        "master_password": "password",
+        "email": "example@example.com",
+        "salt": "salt",
     }
     user = StandardUser(**data)
     data["user_id"] = user.id
@@ -34,4 +35,4 @@ def register_user():
     yield data
 
     with original_db.session() as session:
-        session.query(StandardUser).filter_by(master_username="test_user").delete()
+        session.query(StandardUser).filter_by(username="test_user").delete()

@@ -5,4 +5,7 @@ from pydantic import BaseModel
 
 class Base(BaseModel):
     def __getitem__(self, attr) -> Any:
-        return getattr(self, attr)
+        try:
+            return getattr(self, attr)
+        except AttributeError:
+            raise KeyError(attr)

@@ -20,13 +20,9 @@ class UserWriter(BaseRepository):
 
     @classmethod
     def save_user(cls, data: UserCreation) -> None:
-        if cls._fetch_row(StandardUser, filters={"master_username": data.username}):
+        if cls._fetch_row(StandardUser, filters={"username": data.username}):
             raise ValueError("Username already exists")
-        entry = StandardUser(
-            master_username=data.username,
-            master_password_hash=data.password,
-            encryption_salt=data.salt,
-        )
+        entry = StandardUser(**data.model_dump())
         with db.session() as session:
             session.add(entry)
             session.commit()

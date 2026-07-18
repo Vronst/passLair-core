@@ -19,7 +19,7 @@ class PasswordReader(BaseRepository):
         return self._decrypt_password(encrypted_password, self.user.get_session_key())
 
     def _decrypt_password(self, vault: VaultEntry, dek: str) -> dict:
-        encrypted_password = vault.encrypted_password
+        encrypted_password = vault.password
         nounce = vault.nonce
         login = vault.login
         decrypted_password = ...  # TODO  # FIXME: Decrypt password with DEK and nounce

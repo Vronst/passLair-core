@@ -12,8 +12,8 @@ data = {
     "user_id": "string_id",
     "service_name": "service123",
     "login": "my_login",
-    "encrypted_password": bytes(password, "utf-8"),
-    "nonce": b"11",
+    "password": password,
+    "nonce": "11",
 }
 entry = VaultEntry(**data)
 password_data = PasswordCreation(**data)
@@ -28,7 +28,7 @@ class TestPositive:
 
     def test_preparing_data(self, mock_user_manager):
         login, password, service = "login", "password", "service"
-        return_values = (b"encrypted_password", b"12")
+        return_values = ("password", "12")
         writer = PasswordWriter(user=mock_user_manager)
         with patch.object(
             PasswordWriter,
@@ -40,7 +40,7 @@ class TestPositive:
             )
 
         assert test_data.login == login
-        assert test_data.encrypted_password == b"encrypted_password"
+        assert test_data.password == "password"
         assert test_data.service_name == service
         assert test_data.nonce == return_values[1]
 
@@ -90,7 +90,7 @@ class TestPositive:
 
         assert test_data.login == data["login"]
         assert test_data.nonce == data["nonce"]
-        assert test_data.encrypted_password == data["encrypted_password"]
+        assert test_data.password == data["password"]
 
     def test_new_password(self, mock_user_manager):
         writer = PasswordWriter(mock_user_manager)
@@ -98,7 +98,7 @@ class TestPositive:
 
         assert test_data.login == data["login"]
         assert test_data.nonce == data["nonce"]
-        assert test_data.encrypted_password == data["encrypted_password"]
+        assert test_data.password == data["password"]
 
     def test_encrypt_password(self, mock_user_manager):
         writer = PasswordWriter(mock_user_manager)
@@ -106,8 +106,8 @@ class TestPositive:
             password, mock_user_manager.get_session_key()
         )
 
-        # assert isinstance(password, bytes)  # uncomment after implementing encryption function
-        assert isinstance(nonce, bytes)
+        # assert isinstance(password, str)  # uncomment after implementing encryption function
+        assert isinstance(nonce, str)
         assert enc_pass != password
 
 

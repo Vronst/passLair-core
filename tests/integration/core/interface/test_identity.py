@@ -1,8 +1,10 @@
 import pytest
 
-from passlair.core.interface.auth import Authentication
+from passlair.core.interface.identity import Identity
 
 login = {"username": "test_user", "password": "test_password"}
+register = login.copy()
+register['email'] = "test_email@example.com"
 change_password = {
     "new_password": "new_test_password",
     "old_password": login["password"],
@@ -11,7 +13,7 @@ change_password = {
 
 class TestPositive:
     def test_login_and_logout(self):
-        tested = Authentication()
+        tested = Identity()
         test_result = tested.login(**login)
         assert test_result["success"]
         assert "user_id" in tested.login_status["data"]
@@ -21,7 +23,7 @@ class TestPositive:
         assert "user_id" not in tested.login_status["data"]
 
     def test_change_user_password(self):
-        tested = Authentication()
+        tested = Identity()
         test_result = tested.login(**login)
         assert test_result
 
@@ -41,37 +43,37 @@ class TestPositive:
         """
         Tests if user is able to be registered, and if the user is logged right after registration.
         """
-        tested = Authentication()
-        test_result = tested.register_user(login["username"], login["password"])
+        tested = Identity()
+        test_result = tested.register_user(register["username"], register['email'], register["password"])
 
         assert test_result.success
         assert tested.login_status
 
     def test_password_reset(self, register_user):
-        tested = Authentication()
+        tested = Identity()
         new_password = tested.reset_user_password(register_user["user_id"]).data[
             "new_password"
         ]
         test_result = tested.login(
-            register_user["master_username"], register_user["master_password_hash"]
+            register_user["username"], register_user["master_password"]
         )
 
         assert not test_result.success
 
-        assert tested.login(register_user["master_username"], new_password).success
+        assert tested.login(register_user["username"], new_password).success
 
 
 class TestNegative:
     def test_change_user_password(self):
-        tested = Authentication()
+        tested = Identity()
         test_result = tested.change_user_password(**change_password)
         assert not test_result["success"]
         assert "Permission error" in test_result["data"]
 
     def test_register_user(self, register_user):
-        tested = Authentication()
+        tested = Identity()
         tested_result = tested.register_user(
-            register_user["master_username"], register_user["master_password_hash"]
+            register_user["username"], register_user["email"], register_user["master_password"]
         )
 
         assert not tested_result.success

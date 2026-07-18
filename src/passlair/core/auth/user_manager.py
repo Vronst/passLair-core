@@ -35,8 +35,8 @@ class UserManager(AuthenticatedUser):
         user = UserReader.get_user_by_name(username)
         if not user:
             return
-        encrypted_password: str = user.master_password_hash
-        salt = user.encryption_salt
+        encrypted_password: str = user.master_password
+        salt = user.salt
         decrypted_password = ...  # TODO: decryption
         decrypted_password = "some_password"  # FIXME: DElete
         print(password, decrypted_password)

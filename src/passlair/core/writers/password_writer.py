@@ -36,7 +36,7 @@ class PasswordWriter(BaseRepository):
             user_id=self.user.user_id,
             service_name=service,
             login=login,
-            encrypted_password=encrypted_password,
+            password=encrypted_password,
             nonce=nonce,
         )
 
@@ -53,7 +53,7 @@ class PasswordWriter(BaseRepository):
         return new_entry
 
     def _update_password(self, data: PasswordCreation, entry: VaultEntry) -> VaultEntry:
-        entry.encrypted_password = data["encrypted_password"]
+        entry.password = data["password"]
         entry.login = data["login"]
         entry.nonce = data["nonce"]
         return entry
@@ -64,11 +64,11 @@ class PasswordWriter(BaseRepository):
             service_name=data["service_name"],
             login=data["login"],
             nonce=data["nonce"],
-            encrypted_password=data["encrypted_password"],
+            password=data["password"],
         )
         return new_pass
 
-    def _encrypt_password(self, password: str, dek: str) -> tuple[bytearray, bytes]:
+    def _encrypt_password(self, password: str, dek: str) -> tuple[str, str]:
         if not isinstance(dek, str) or dek == "":
             raise ValueError("Session key is invalid!")
         nonce = os.urandom(12)
