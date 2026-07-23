@@ -13,7 +13,7 @@ data = {
     "service_name": "service123",
     "login": "my_login",
     "password": password,
-    "nonce": "11",
+    "nonce": b"11",
 }
 entry = VaultEntry(**data)
 password_data = PasswordCreation(**data)
@@ -28,7 +28,7 @@ class TestPositive:
 
     def test_preparing_data(self, mock_user_manager):
         login, password, service = "login", "password", "service"
-        return_values = ("password", "12")
+        return_values = ("password", b"12")
         writer = PasswordWriter(user=mock_user_manager)
         with patch.object(
             PasswordWriter,
@@ -123,7 +123,6 @@ class TestNegative:
         """Ensure data preparation raises ValueErrors on bad or blank inputs."""
         writer = PasswordWriter(user=mock_user_manager)
 
-        # Testing if your design rejects blank service names or empty passwords
         with pytest.raises(ValueError):
             writer._prepare_data(service="", login="my_login", password="password")
 

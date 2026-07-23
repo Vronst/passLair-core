@@ -1,4 +1,3 @@
-from ast import Pass
 import os
 
 from passlair_crypto.package import encrypt_password
@@ -32,6 +31,9 @@ class PasswordWriter(BaseRepository):
     ) -> PasswordCreation:
         if not self.user or (dek := self.user.get_session_key()) is None:
             raise ValueError("User session expired")
+
+        if service == '' or login == '' or password == '':
+            raise ValueError("Service name, login and password must not be empty")
 
         encrypted_password, nonce = self._encrypt_password(password, dek)
         assert isinstance(self.user.user_id, str)  # for linting
@@ -69,5 +71,5 @@ class PasswordWriter(BaseRepository):
         if not isinstance(dek, str) or dek == "":
             raise ValueError("Session key is invalid!")
         nonce = os.urandom(12)
-        encrypted_password = encrypt_password(password, nonce, dek)  # TODO: function crypting password with nonce and dek
-        return encrypted_password, nonce
+        encrypted_password = encrypt_password(password.encode("utf-8"), nonce, dek.encode("utf-8"))
+        return encrypted_password.decode("utf-8"), nonce
