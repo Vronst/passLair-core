@@ -12,7 +12,7 @@ data = {
     "user_id": "string_id",
     "service_name": "service123",
     "login": "my_login",
-    "password": password,
+    "password": password.encode("utf-8"),
     "nonce": b"11",
 }
 entry = VaultEntry(**data)
@@ -40,7 +40,7 @@ class TestPositive:
             )
 
         assert test_data.login == login
-        assert test_data.password == "password"
+        assert test_data.password == b"password"
         assert test_data.service_name == service
         assert test_data.nonce == return_values[1]
 
@@ -100,16 +100,17 @@ class TestPositive:
         assert test_data.nonce == data["nonce"]
         assert test_data.password == data["password"]
 
-    # FIXME: integration test
-    # def test_encrypt_password(self, mock_user_manager):
-    #     writer = PasswordWriter(mock_user_manager)
-    #     enc_pass, nonce = writer._encrypt_password(
-    #         password, mock_user_manager.get_session_key()
-    #     )
+    def test_encrypt_password(self, mock_user_manager):
+        """Regression guard: passlair_crypto only accepts real bytes, not bytearray."""
+        writer = PasswordWriter(mock_user_manager)
+        dek = b"a_real_32_byte_session_key_here"
 
-    #     assert isinstance(password, str)  # uncomment after implementing encryption function
-    #     assert isinstance(nonce, str)
-    #     assert enc_pass != password
+        enc_pass, nonce = writer._encrypt_password(password, dek)
+
+        assert isinstance(enc_pass, bytes)
+        assert isinstance(nonce, bytes)
+        assert len(nonce) == 12
+        assert enc_pass != password.encode("utf-8")
 
 
 class TestNegative:

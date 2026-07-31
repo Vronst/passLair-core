@@ -63,12 +63,8 @@ class TestPositive:
 
         with db.session() as session:
             assert isinstance(session, Session)
-            # We can execute raw sql to check liveliness
-            with db.session() as session:
-                result = session.execute(text("SELECT 1")).scalar()
-
+            result = session.execute(text("SELECT 1")).scalar()
             assert result == 1
-            # Transaction is implicitly alive and healthy here
 
         # After exiting block, factory should be cleaned via remove()
         # verify engine is intact but scoped session safely closed its thread local

@@ -2,6 +2,8 @@ import pytest
 
 from passlair.core.database.database_manager import db as original_db
 from passlair.core.models.standard_user import StandardUser
+from passlair.core.readers.user_reader import UserReader
+from passlair.core.writers.user_writer import UserWriter
 
 
 @pytest.fixture(autouse=True)
@@ -13,26 +15,29 @@ def set_up_db():
 @pytest.fixture(autouse=False)
 def register_user():
     """
-    Sets up a clean test user before the test,
-    provides it to the test function, and shreds it afterward.
+    Registers a real user through the actual UserWriter pipeline (so the
+    stored master_password/dek are consistent with what login/change_password
+    will derive) before the test, and shreds it afterward.
+
+    A hand-rolled StandardUser with made-up salt/dek bytes would never
+    authenticate, since it bypasses derive_keys entirely.
 
     Yields:
-        dict
+        dict: username, email, plaintext password, and the new user's id.
     """
-    data = {
-        "username": "test_user",
-        "master_password": "password",
-        "email": "example@example.com",
-        "salt": "salt",
+    username = "test_user"
+    email = "example@example.com"
+    password = "test_password"
+
+    UserWriter.save_user(UserWriter.prepare_new_user(username, email, password))
+    user = UserReader.get_user_by_name(username)
+
+    yield {
+        "username": username,
+        "email": email,
+        "password": password,
+        "user_id": user.id,
     }
-    user = StandardUser(**data)
-    data["user_id"] = user.id
 
     with original_db.session() as session:
-        session.add(user)
-        session.commit()
-
-    yield data
-
-    with original_db.session() as session:
-        session.query(StandardUser).filter_by(username="test_user").delete()
+        session.query(StandardUser).filter_by(username=username).delete()

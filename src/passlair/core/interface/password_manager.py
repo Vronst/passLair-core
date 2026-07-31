@@ -17,7 +17,7 @@ class PasswordManager(BaseFacade):
             result = self.pass_reader.get_pass_for(service)
             return self._success("Password retrieved successfuly", result)
 
-        except (KeyError, RuntimeError) as e:
+        except (KeyError, RuntimeError, PermissionError) as e:
             return self._failure(str(e))
 
     def set_password_for_service(self, service: str, login: str, password: str) -> FacadeResult:
@@ -27,5 +27,5 @@ class PasswordManager(BaseFacade):
 
             return self._success("Password set succesfully")
 
-        except (KeyError, RuntimeError, ValueError, TypeError) as e:
+        except (KeyError, RuntimeError, ValueError, TypeError, PermissionError) as e:
             return self._failure(str(e))

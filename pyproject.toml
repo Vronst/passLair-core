@@ -25,3 +25,12 @@ test = [
 
 [tool.uv.sources]
 passlair-crypto = { path = "../passLair-crypto" }
+
+[tool.pytest.ini_options]
+# Surfaces our logger.debug/info/warning calls in the "Captured log call"
+# section pytest attaches to failing tests, without printing anything for
+# tests that pass. Use `-o log_cli=true` on the command line to also stream
+# logs live while a test is running.
+log_level = "DEBUG"
+log_format = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
+log_date_format = "%H:%M:%S"

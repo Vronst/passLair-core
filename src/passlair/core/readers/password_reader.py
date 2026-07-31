@@ -1,33 +1,38 @@
+import logging
+
 from typing_extensions import Type
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.base_repository import BaseRepository
+from ..crypto import decrypt
 from ..models.vault_entry import VaultEntry
+
+logger = logging.getLogger(__name__)
 
 
 class PasswordReader(BaseRepository):
     def __init__(self, user: AuthenticatedUser):
-        if not isinstance(user, AuthenticatedUser):
-            raise TypeError("Invalid authentication class used on init")
-        self.user = user
+        self.user = AuthenticatedUser.require(user)
 
     def get_pass_for(self, service: str) -> dict:
         encrypted_password = self._retrieve_password(service)
         if encrypted_password is None:
+            logger.warning("get_pass_for: no vault entry for service=%r", service)
             raise KeyError("Password for this service not found")
 
+        logger.debug("Decrypting vault entry for service=%r", service)
         return self._decrypt_password(encrypted_password, self.user.get_session_key())
 
-    def _decrypt_password(self, vault: VaultEntry, dek: str) -> dict:
+    def _decrypt_password(self, vault: VaultEntry, dek: bytes) -> dict:
         encrypted_password = vault.password
-        nounce = vault.nonce
+        nonce = vault.nonce
         login = vault.login
-        decrypted_password = ...  # TODO  # FIXME: Decrypt password with DEK and nounce
-        return {"login": login, "password": decrypted_password}
+        decrypted_password = decrypt(encrypted_password, nonce, dek)
+        return {"login": login, "password": decrypted_password.decode("utf-8")}
 
     def _retrieve_password(self, service) -> VaultEntry | None:
         password = self._fetch_row(
-            VaultEntry, filters={"service": service, "user_id": self.user.user_id}
+            VaultEntry, filters={"service_name": service, "user_id": self.user.user_id}
         )
 
         return password

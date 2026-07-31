@@ -21,9 +21,9 @@ class VaultEntry(Base):
         service_name (str): The name or URL of the service (e.g., 'github.com').
             Used as a search filter in the VaultReader.
         login (str): Optional username or email associated with the service.
-        password (str): The AES-GCM encrypted ciphertext of the
+        password (bytes): The AES-GCM encrypted ciphertext of the
             raw password. Must be decrypted using the user's active session key.
-        nonce (str): A unique initialization vector (IV) used during
+        nonce (bytes): A unique initialization vector (IV) used during
             the encryption of this specific entry. Never reused across entries.
     """
 
@@ -37,5 +37,5 @@ class VaultEntry(Base):
 
     service_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     login: Mapped[str] = mapped_column(String(255), nullable=True)
-    password: Mapped[str] = mapped_column(String(255), nullable=False)
+    password: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     nonce: Mapped[bytes] = mapped_column(LargeBinary(12), nullable=False)

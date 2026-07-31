@@ -14,6 +14,9 @@ def mock_db_session():
         mock_session = MagicMock()
         # Chaining the context manager __enter__ state cleanly
         mock_db.session.return_value.__enter__.return_value = mock_session
+        # Without this, MagicMock's auto __exit__ returns truthy and silently
+        # swallows exceptions raised inside "with db.session() as session:".
+        mock_db.session.return_value.__exit__.return_value = False
         yield mock_session, mock_db
 
 
@@ -21,7 +24,12 @@ def mock_db_session():
 def mock_user_data():
     """Generates standard user data for validation tests."""
     return UserCreation(
-        username="test_user", email="test@example.com", master_password="secure_password", salt="random_salt"
+        username="test_user",
+        email="test@example.com",
+        master_password=b"secure_password_hash",
+        salt=b"random_salt",
+        dek=b"encrypted_dek",
+        dek_nonce=b"dek_nonce_12",
     )
 
 
@@ -30,8 +38,13 @@ def mock_user():
     """Generates StandarUser mock for tests."""
     mock = MagicMock(spec=StandardUser)
     mock.id = "secret_id"
-    mock.master_password= "some_password"
-    mock.salt = "salt"
+    # passlair_crypto's derive_keys is currently a stub returning a constant
+    # hash (vec![1u8; 32]); this must match it for "correct password" tests
+    # to be meaningful until real crypto lands.
+    mock.master_password = bytes([1] * 32)
+    mock.salt = b"salt"
+    mock.dek = b"dek"
+    mock.dek_nonce = b"dek_nonce_12"
     return mock
 
 

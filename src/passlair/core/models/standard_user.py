@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import LargeBinary
 
 from .base import Base
 
@@ -16,6 +17,7 @@ class StandardUser(Base):
         String(150), unique=True, nullable=False, index=True
     )
     email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False, index=True)
-    master_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    salt: Mapped[str] = mapped_column(String(18), nullable=False)
-    dek: Mapped[str] = mapped_column(String(255), nullable=False)
+    master_password: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    salt: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    dek: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    dek_nonce: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)

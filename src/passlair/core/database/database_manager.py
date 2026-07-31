@@ -1,3 +1,4 @@
+import logging
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -7,6 +8,8 @@ from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from ...base import SingletonMeta
 from ..models.base import Base
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseManager(metaclass=SingletonMeta):
@@ -28,10 +31,12 @@ class DatabaseManager(metaclass=SingletonMeta):
     def init_sqlite(self, filepath: str | None = None, *, force: bool = False):
         """Initializes a local SQLite database configuration."""
         if not self._reinit_check(force):
+            logger.debug("SQLite already initialized, skipping re-init (force=False).")
             return
 
         filepath = filepath or str(Path(__file__).parents[4] / "passLair_db.db")
         database_url = f"sqlite:///{filepath}"
+        logger.info("Initializing SQLite database at %s", filepath)
 
         self._engine = create_engine(
             database_url, connect_args={"check_same_thread": False}
@@ -55,7 +60,14 @@ class DatabaseManager(metaclass=SingletonMeta):
             f"mariadb+pymysql://{username}:{password_str}@{host}:{port}/{database}"
         )
         if not self._reinit_check(force):
+            logger.debug("MariaDB already initialized, skipping re-init (force=False).")
             return
+
+        # Never log database_url directly -- it embeds password_str in cleartext.
+        logger.info(
+            "Initializing MariaDB connection to %s:%s/%s as %s",
+            host, port, database, username,
+        )
 
         self._engine = create_engine(
             database_url,
@@ -70,7 +82,10 @@ class DatabaseManager(metaclass=SingletonMeta):
     def _setup_factory(self):
         """Internal helper to tie the engine to the session factories."""
         local_factory = sessionmaker(
-            autocommit=False, autoflush=False, bind=self._engine
+            autocommit=False,
+            autoflush=False,
+            bind=self._engine,
+            expire_on_commit=False,
         )
         # scoped_session ensures thread-safety across your library
         self._session_factory = scoped_session(local_factory)
@@ -99,6 +114,7 @@ class DatabaseManager(metaclass=SingletonMeta):
             yield db_session
             db_session.commit()
         except Exception:
+            logger.exception("Session raised, rolling back transaction.")
             db_session.rollback()
             raise
         finally:

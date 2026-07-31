@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -6,7 +6,7 @@ from passlair.core.models.vault_entry import VaultEntry
 from passlair.core.readers.password_reader import PasswordReader
 
 password = "retrievedPassword"
-dek = "dek"
+dek = b"dek"
 data = {
     "service_name": "test_service",
     # "user_id ": "string_id",
@@ -45,7 +45,9 @@ class TestPositive:
         assert "login" in test_data
         assert "password" in test_data
         assert test_data["login"] == data["login"]
-        # assert test_data["password"] == data["password"]  # uncomment when implemented
+        # passlair_crypto's decrypt_password is currently a passthrough mock,
+        # so this only proves the plumbing is correct, not real decryption.
+        assert test_data["password"] == data["password"].decode("utf-8")
 
     def test_retrieve_password(self, mock_user_manager):
         reader = PasswordReader(mock_user_manager)

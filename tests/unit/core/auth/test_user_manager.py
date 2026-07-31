@@ -19,7 +19,7 @@ class TestPositive:
     def test_user_login(self, mock_user):
         manager = UserManager()
         with patch.object(
-            UserManager, "_verify_password", return_value=mock_user
+            UserManager, "_verify_password", return_value=(mock_user, b"some_kek")
         ) as mock:
             test_data = manager.login(username, password)
 
@@ -41,6 +41,22 @@ class TestPositive:
         manager.logout()
 
         assert manager.user_id is None
+        # Regression guard: logout must actually clear the DEK, not just the
+        # user_id, or a decrypted session key stays usable after "logging out".
+        with pytest.raises(PermissionError):
+            manager.get_session_key()
+
+    def test_login_status_true_when_dek_and_user_id_set(self):
+        manager = UserManager()
+        manager._UserManager__dek = "some_dek"
+        manager._UserManager__user_id = "some_id"
+
+        assert manager.login_status is True
+
+    def test_login_status_false_when_not_logged_in(self):
+        manager = UserManager()
+
+        assert manager.login_status is False
 
     def test_get_session_key(self):
         manager = UserManager()
@@ -57,7 +73,8 @@ class TestPositive:
             test_data = manager._verify_password(username, password)
 
         assert test_data
-        assert test_data.salt == "salt"
+        user, kek = test_data
+        assert user.salt == b"salt"
         mock.assert_called_once_with(username)
 
 
