@@ -31,13 +31,17 @@ class UserWriter(BaseRepository):
         then re-encrypts that same DEK under a freshly derived KEK for the new
         password, so previously-stored vault entries stay decryptable.
         """
-        if not (user := self._fetch_row(StandardUser, filters={"id": self.user.user_id})):
+        if not (
+            user := self._fetch_row(StandardUser, filters={"id": self.user.user_id})
+        ):
             logger.warning("change_password: no user for id=%r", self.user.user_id)
             raise ValueError("User doesn't exists!")
 
         old_kek = verify_password(old_password, user.salt, user.master_password)
         if old_kek is None:
-            logger.warning("change_password: wrong old password for user_id=%r", user.id)
+            logger.warning(
+                "change_password: wrong old password for user_id=%r", user.id
+            )
             raise ValueError("Old password incorrect.")
 
         dek = unwrap_dek(user.dek, user.dek_nonce, old_kek)
@@ -57,7 +61,9 @@ class UserWriter(BaseRepository):
 
         logger.info("Password changed for user_id=%r", user.id)
 
-    def reset_password(self, username: str, new_password: str, backup_phrase: str) -> str:
+    def reset_password(
+        self, username: str, new_password: str, backup_phrase: str
+    ) -> str:
         """
         Recovers the DEK using the one-time backup KEK phrase (there's no
         active session to derive one from, since the caller has forgotten
@@ -97,7 +103,9 @@ class UserWriter(BaseRepository):
         return new_phrase
 
     @classmethod
-    def prepare_new_user(cls, username: str, email: str, password: str) -> tuple[UserCreation, str]:
+    def prepare_new_user(
+        cls, username: str, email: str, password: str
+    ) -> tuple[UserCreation, str]:
         """
         Generates a fresh salt/DEK pair and hashes the password for a new
         account. Also generates a random backup KEK and wraps the same DEK
@@ -146,10 +154,15 @@ class UserWriter(BaseRepository):
             error_msg = str(e.orig).lower()
 
             if "username" in error_msg:
-                logger.warning("save_user rejected: username=%r already exists", data.username)
+                logger.warning(
+                    "save_user rejected: username=%r already exists", data.username
+                )
                 raise ValueError("Username already exists")
             elif "email" in error_msg:
-                logger.warning("save_user rejected: email already in use for username=%r", data.username)
+                logger.warning(
+                    "save_user rejected: email already in use for username=%r",
+                    data.username,
+                )
                 raise ValueError("Email already exists")
 
             logger.exception("save_user failed with an unexpected integrity error.")

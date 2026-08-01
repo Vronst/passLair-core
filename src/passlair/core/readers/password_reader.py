@@ -1,6 +1,5 @@
 import logging
 
-from typing_extensions import Type
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.base_repository import BaseRepository

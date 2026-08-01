@@ -18,5 +18,7 @@ class BaseRepository(ABC):
         with db.session() as session:
             row = session.query(model).filter_by(**filters).first()
 
-        logger.debug("%s lookup %s", model.__name__, "found a row" if row else "found nothing")
+        logger.debug(
+            "%s lookup %s", model.__name__, "found a row" if row else "found nothing"
+        )
         return row

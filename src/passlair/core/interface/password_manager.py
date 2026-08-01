@@ -20,7 +20,9 @@ class PasswordManager(BaseFacade):
         except (KeyError, RuntimeError, PermissionError) as e:
             return self._failure(str(e))
 
-    def set_password_for_service(self, service: str, login: str, password: str) -> FacadeResult:
+    def set_password_for_service(
+        self, service: str, login: str, password: str
+    ) -> FacadeResult:
         try:
             if not self.pass_writer.save_password(service, login, password):
                 raise RuntimeError("Failed to save credentials")

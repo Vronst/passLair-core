@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 
 
 class Identity(BaseFacade):
-    def __init__(self,
+    def __init__(
+        self,
         user_manager: UserManager | None = None,
         user_writer: UserWriter | None = None,
     ):
@@ -52,8 +53,10 @@ class Identity(BaseFacade):
     def change_user_password(
         self, new_password: str, old_password: str
     ) -> FacadeResult:
-        if not isinstance(old_password, str) or old_password == '':
-            logger.warning("change_user_password: old_password must be a non-empty string")
+        if not isinstance(old_password, str) or old_password == "":
+            logger.warning(
+                "change_user_password: old_password must be a non-empty string"
+            )
             return self._failure("Old password must be a non-empty string.")
         if not self.manager.login_status:
             logger.warning("change_user_password attempted without an active session.")
@@ -70,7 +73,11 @@ class Identity(BaseFacade):
         try:
             self.user_writer.change_password(new_password, old_password)
         except ValueError as e:
-            logger.warning("change_user_password failed for user_id=%r: %s", self.manager.user_id, e)
+            logger.warning(
+                "change_user_password failed for user_id=%r: %s",
+                self.manager.user_id,
+                e,
+            )
             return self._failure(str(e))
 
         logger.info("Password changed for user_id=%r", self.manager.user_id)
@@ -80,9 +87,13 @@ class Identity(BaseFacade):
         self, username: str, backup_phrase: str, new_password: str
     ) -> FacadeResult:
         try:
-            new_phrase = self.user_writer.reset_password(username, new_password, backup_phrase)
+            new_phrase = self.user_writer.reset_password(
+                username, new_password, backup_phrase
+            )
         except ValueError as e:
-            logger.warning("reset_user_password failed for username=%r: %s", username, e)
+            logger.warning(
+                "reset_user_password failed for username=%r: %s", username, e
+            )
             return self._failure(str(e))
 
         logger.info("Password reset via backup phrase for username=%r", username)

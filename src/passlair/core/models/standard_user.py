@@ -16,7 +16,9 @@ class StandardUser(Base):
     username: Mapped[str] = mapped_column(
         String(150), unique=True, nullable=False, index=True
     )
-    email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(
+        String(150), unique=True, nullable=False, index=True
+    )
     master_password: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     salt: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     dek: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)

@@ -44,7 +44,10 @@ class TestPositive:
         salt = new_salt()
         _, kek = hash_password("hunter2", salt)
 
-        assert unwrap_dek(b"some-ciphertext", new_salt()[:NONCE_SIZE], kek) == b"some-ciphertext"
+        assert (
+            unwrap_dek(b"some-ciphertext", new_salt()[:NONCE_SIZE], kek)
+            == b"some-ciphertext"
+        )
 
 
 class TestNegative:

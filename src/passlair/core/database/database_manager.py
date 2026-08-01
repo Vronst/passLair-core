@@ -66,7 +66,10 @@ class DatabaseManager(metaclass=SingletonMeta):
         # Never log database_url directly -- it embeds password_str in cleartext.
         logger.info(
             "Initializing MariaDB connection to %s:%s/%s as %s",
-            host, port, database, username,
+            host,
+            port,
+            database,
+            username,
         )
 
         self._engine = create_engine(

@@ -17,14 +17,18 @@ class PasswordWriter(BaseRepository):
     def save_password(self, service: str, login: str, password: str) -> bool:
         data = self._prepare_data(service, login, password)
         if not (entry := self._add_or_update(data)):
-            logger.warning("save_password failed to build an entry for service=%r", service)
+            logger.warning(
+                "save_password failed to build an entry for service=%r", service
+            )
             return False
 
         with db.session() as session:
             session.add(entry)
             session.commit()
 
-        logger.info("Password saved for service=%r, user_id=%r", service, self.user.user_id)
+        logger.info(
+            "Password saved for service=%r, user_id=%r", service, self.user.user_id
+        )
         return True
 
     def _prepare_data(
@@ -35,7 +39,7 @@ class PasswordWriter(BaseRepository):
         # PermissionError rather than expect a ValueError here.
         dek = self.user.get_session_key()
 
-        if service == '' or login == '' or password == '':
+        if service == "" or login == "" or password == "":
             logger.warning("_prepare_data rejected empty service/login/password field.")
             raise ValueError("Service name, login and password must not be empty")
 
@@ -52,12 +56,18 @@ class PasswordWriter(BaseRepository):
     def _add_or_update(self, data: PasswordCreation) -> VaultEntry:
         entry = self._fetch_row(
             VaultEntry,
-            filters={"service_name": data["service_name"], "user_id": self.user.user_id},
+            filters={
+                "service_name": data["service_name"],
+                "user_id": self.user.user_id,
+            },
         )
         if entry is None:
             new_entry = self._new_password(data)
         else:
             new_entry = self._update_password(data, entry)
+
+        if new_entry is None:
+            raise ValueError("Failed to build a vault entry.")
 
         return new_entry
 

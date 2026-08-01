@@ -4,7 +4,6 @@ from passlair.core.readers.user_reader import UserReader
 
 
 class TestPositive:
-
     def test_compare_passwords(self, mock_user):
 
         with patch.object(UserReader, "get_user_by", return_value=mock_user):
@@ -12,7 +11,6 @@ class TestPositive:
 
 
 class TestNegative:
-
     def test_compare_passwords_user_not_found(self):
         with patch.object(UserReader, "get_user_by", return_value=None):
             assert not compare_passwords(user_id="unknown_id", password="some_password")

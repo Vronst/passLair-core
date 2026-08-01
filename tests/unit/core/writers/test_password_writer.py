@@ -168,10 +168,9 @@ class TestNegative:
         # Simulate a scenario where _new_password fails to build an entry and returns None
         with (
             patch.object(
-                PasswordWriter, "_fetch_row", return_value=False
+                PasswordWriter, "_fetch_row", return_value=None
             ),  # Simulates entry not found
             patch.object(PasswordWriter, "_new_password", return_value=None),
         ):
-            # If your code expects a valid object, this should fail a check or throw an error
-            with pytest.raises((ValueError, AttributeError)):
+            with pytest.raises(ValueError, match="Failed to build a vault entry"):
                 writer._add_or_update(password_data)

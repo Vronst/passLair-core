@@ -68,9 +68,7 @@ class TestNegative:
         """Ensure get_pass_for raises an exception or handles a missing row gracefully."""
         reader = PasswordReader(mock_user_manager)
         with (
-            patch.object(
-                PasswordReader, "_retrieve_password", return_value=None
-            ) as retriever,
+            patch.object(PasswordReader, "_retrieve_password", return_value=None),
             pytest.raises(KeyError),
         ):
             reader.get_pass_for(data["service_name"])

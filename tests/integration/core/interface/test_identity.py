@@ -18,11 +18,15 @@ class TestPositive:
         tested = Identity()
         new_password = "new_test_password"
 
-        assert tested.login(register_user["username"], register_user["password"]).success
+        assert tested.login(
+            register_user["username"], register_user["password"]
+        ).success
 
         before = UserReader.get_user_by_name(register_user["username"])
 
-        assert tested.change_user_password(new_password, register_user["password"]).success
+        assert tested.change_user_password(
+            new_password, register_user["password"]
+        ).success
 
         # passlair_crypto's derive_keys is currently a mock that ignores its
         # inputs, so a changed password can't be proven to invalidate the old

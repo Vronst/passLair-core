@@ -118,7 +118,9 @@ class TestChangeUserPassword:
             result = identity.change_user_password("new_password", "old_password")
 
         assert result.success
-        user_writer.change_password.assert_called_once_with("new_password", "old_password")
+        user_writer.change_password.assert_called_once_with(
+            "new_password", "old_password"
+        )
 
 
 class TestRegisterUser:
@@ -154,7 +156,9 @@ class TestResetUserPassword:
         identity, _, user_writer = make_identity()
         user_writer.reset_password.return_value = "new backup phrase"
 
-        result = identity.reset_user_password("bob", "old backup phrase", "new_password")
+        result = identity.reset_user_password(
+            "bob", "old backup phrase", "new_password"
+        )
 
         assert result.success
         assert result.data["backup_phrase"] == "new backup phrase"
@@ -166,7 +170,9 @@ class TestResetUserPassword:
         identity, _, user_writer = make_identity()
         user_writer.reset_password.side_effect = ValueError("User doesn't exists!")
 
-        result = identity.reset_user_password("bob", "old backup phrase", "new_password")
+        result = identity.reset_user_password(
+            "bob", "old backup phrase", "new_password"
+        )
 
         assert not result.success
         assert "User doesn't exists" in result.messege

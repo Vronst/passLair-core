@@ -107,7 +107,7 @@ class TestNegative:
 
     def test_verify_password_incorrect(self, mock_user):
         manager = UserManager()
-        with patch.object(UserReader, "get_user_by_name", return_value=None) as mock:
+        with patch.object(UserReader, "get_user_by_name", return_value=None):
             test_data = manager._verify_password(username, password)
 
         assert test_data is None

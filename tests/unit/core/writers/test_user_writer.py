@@ -4,7 +4,6 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from passlair.core.auth.credentials import backup_kek_from_phrase, new_dek, wrap_dek
-from passlair.core.models.standard_user import StandardUser
 from passlair.core.writers.user_writer import UserWriter
 
 
@@ -22,7 +21,9 @@ class TestPositive:
 
     def test_prepare_new_user(self):
         """Regression guard: must produce real bytes (not bytearray/str) for every field."""
-        data, backup_phrase = UserWriter.prepare_new_user("bob", "bob@example.com", "hunter2")
+        data, backup_phrase = UserWriter.prepare_new_user(
+            "bob", "bob@example.com", "hunter2"
+        )
 
         assert data.username == "bob"
         assert data.email == "bob@example.com"
@@ -38,13 +39,17 @@ class TestPositive:
 
     def test_reset_password(self, mock_user, mock_user_manager, mock_db_session):
         mock_session, _ = mock_db_session
-        _, backup_phrase = UserWriter.prepare_new_user("bob", "bob@example.com", "hunter2")
+        _, backup_phrase = UserWriter.prepare_new_user(
+            "bob", "bob@example.com", "hunter2"
+        )
 
         # reset_password needs a user row whose backup_dek was actually
         # wrapped under the KEK that backup_phrase decodes to, so build one
         # from real prepare_new_user output rather than the generic mock_user.
         dek = new_dek()
-        backup_dek, backup_dek_nonce = wrap_dek(dek, backup_kek_from_phrase(backup_phrase))
+        backup_dek, backup_dek_nonce = wrap_dek(
+            dek, backup_kek_from_phrase(backup_phrase)
+        )
         mock_user.backup_dek = backup_dek
         mock_user.backup_dek_nonce = backup_dek_nonce
 
@@ -69,7 +74,9 @@ class TestPositive:
 
 
 class TestNegative:
-    def test_save_user_raises_on_duplicate_username(self, mock_db_session, mock_user_data):
+    def test_save_user_raises_on_duplicate_username(
+        self, mock_db_session, mock_user_data
+    ):
         mock_session, _ = mock_db_session
         mock_session.commit.side_effect = IntegrityError(
             "INSERT", {}, Exception("UNIQUE constraint failed: standard_users.username")
