@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class UserManager(AuthenticatedUser):
-    def __init__(self):
+    def __init__(self) -> None:
         self.__dek: bytes | None = None
         self.__user_id: str | None = None
 

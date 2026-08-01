@@ -14,6 +14,7 @@ import secrets
 from passlair_crypto.package import derive_keys
 
 from ..crypto import decrypt, encrypt
+from .mnemonic import kek_to_phrase, phrase_to_kek
 
 DEK_SIZE = 32
 SALT_SIZE = 16
@@ -25,6 +26,21 @@ def new_salt() -> bytes:
 
 def new_dek() -> bytes:
     return secrets.token_bytes(DEK_SIZE)
+
+
+def new_backup_kek() -> tuple[bytes, str]:
+    """
+    Generates a random backup KEK, unrelated to any password. Never stored -
+    returns both the raw key (to wrap the DEK with) and its 24-word recovery
+    phrase (to show the user exactly once).
+    """
+    kek = secrets.token_bytes(DEK_SIZE)
+    return kek, kek_to_phrase(kek)
+
+
+def backup_kek_from_phrase(phrase: str) -> bytes:
+    """Parses a recovery phrase back into its raw backup KEK."""
+    return phrase_to_kek(phrase)
 
 
 def hash_password(password: str, salt: bytes) -> tuple[bytes, bytes]:

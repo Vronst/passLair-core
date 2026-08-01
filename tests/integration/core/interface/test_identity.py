@@ -1,5 +1,3 @@
-import pytest
-
 from passlair.core.interface.identity import Identity
 from passlair.core.readers.user_reader import UserReader
 
@@ -49,19 +47,39 @@ class TestPositive:
         assert test_result.success
         assert tested.login_status.success
 
-    @pytest.mark.skip(reason="Identity.reset_user_password is not implemented yet")
     def test_password_reset(self, register_user):
         tested = Identity()
-        new_password = tested.reset_user_password(register_user["user_id"]).data[
-            "new_password"
-        ]
-        test_result = tested.login(
-            register_user["username"], register_user["password"]
-        )
+        new_password = "recovered_password"
 
-        assert not test_result.success
+        before = UserReader.get_user_by_name(register_user["username"])
+
+        result = tested.reset_user_password(
+            register_user["username"], register_user["backup_phrase"], new_password
+        )
+        assert result.success
+        assert len(result.data["backup_phrase"].split()) == 24
+        assert result.data["backup_phrase"] != register_user["backup_phrase"]
+
+        # passlair_crypto's derive_keys/encrypt_password are currently mocks
+        # that ignore their key/nonce inputs (see test_change_user_password),
+        # so ciphertext alone can't prove anything rotated; the nonces being
+        # freshly re-randomized on every reset is what real crypto doesn't
+        # affect.
+        after = UserReader.get_user_by_name(register_user["username"])
+        assert after.salt != before.salt
+        assert after.dek_nonce != before.dek_nonce
+        assert after.backup_dek_nonce != before.backup_dek_nonce
 
         assert tested.login(register_user["username"], new_password).success
+
+    def test_password_reset_wrong_phrase_rejected(self, register_user):
+        tested = Identity()
+
+        result = tested.reset_user_password(
+            register_user["username"], "definitely not the right phrase", "new_password"
+        )
+
+        assert not result.success
 
 
 class TestNegative:

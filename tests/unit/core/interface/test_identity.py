@@ -125,11 +125,12 @@ class TestRegisterUser:
     def test_success(self):
         identity, manager, user_writer = make_identity()
         prepared = object()
-        user_writer.prepare_new_user.return_value = prepared
+        user_writer.prepare_new_user.return_value = (prepared, "word " * 23 + "word")
 
         result = identity.register_user("login", "email@example.com", "password")
 
         assert result.success
+        assert result.data["backup_phrase"] == "word " * 23 + "word"
         user_writer.prepare_new_user.assert_called_once_with(
             "login", "email@example.com", "password"
         )
@@ -138,6 +139,7 @@ class TestRegisterUser:
 
     def test_failure_on_duplicate(self):
         identity, manager, user_writer = make_identity()
+        user_writer.prepare_new_user.return_value = (object(), "irrelevant phrase")
         user_writer.save_user.side_effect = ValueError("Username already exists")
 
         result = identity.register_user("login", "email@example.com", "password")
@@ -145,3 +147,26 @@ class TestRegisterUser:
         assert not result.success
         assert "Username already exists" in result.messege
         manager.login.assert_not_called()
+
+
+class TestResetUserPassword:
+    def test_success(self):
+        identity, _, user_writer = make_identity()
+        user_writer.reset_password.return_value = "new backup phrase"
+
+        result = identity.reset_user_password("bob", "old backup phrase", "new_password")
+
+        assert result.success
+        assert result.data["backup_phrase"] == "new backup phrase"
+        user_writer.reset_password.assert_called_once_with(
+            "bob", "new_password", "old backup phrase"
+        )
+
+    def test_failure_bubbles_up_as_result(self):
+        identity, _, user_writer = make_identity()
+        user_writer.reset_password.side_effect = ValueError("User doesn't exists!")
+
+        result = identity.reset_user_password("bob", "old backup phrase", "new_password")
+
+        assert not result.success
+        assert "User doesn't exists" in result.messege

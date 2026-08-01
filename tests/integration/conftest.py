@@ -29,7 +29,8 @@ def register_user():
     email = "example@example.com"
     password = "test_password"
 
-    UserWriter.save_user(UserWriter.prepare_new_user(username, email, password))
+    data, backup_phrase = UserWriter.prepare_new_user(username, email, password)
+    UserWriter.save_user(data)
     user = UserReader.get_user_by_name(username)
 
     yield {
@@ -37,6 +38,7 @@ def register_user():
         "email": email,
         "password": password,
         "user_id": user.id,
+        "backup_phrase": backup_phrase,
     }
 
     with original_db.session() as session:

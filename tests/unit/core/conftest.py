@@ -30,6 +30,8 @@ def mock_user_data():
         salt=b"random_salt",
         dek=b"encrypted_dek",
         dek_nonce=b"dek_nonce_12",
+        backup_dek=b"encrypted_backup_dek",
+        backup_dek_nonce=b"backup_dek_nonc",
     )
 
 
@@ -45,6 +47,8 @@ def mock_user():
     mock.salt = b"salt"
     mock.dek = b"dek"
     mock.dek_nonce = b"dek_nonce_12"
+    mock.backup_dek = b"backup_dek"
+    mock.backup_dek_nonce = b"backup_dek_nonce_12"
     return mock
 
 

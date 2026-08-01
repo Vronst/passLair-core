@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 from ..readers.helpers import compare_passwords
 from ...base.abstract.base_facade import BaseFacade
 from ..auth.user_manager import UserManager
-from ..readers.user_reader import UserReader
 from ..writers.user_writer import UserWriter
 
 logger = logging.getLogger(__name__)
@@ -20,11 +19,9 @@ class Identity(BaseFacade):
     def __init__(self,
         user_manager: UserManager | None = None,
         user_writer: UserWriter | None = None,
-        # user_reader: UserReader | None = None
     ):
         self.manager = user_manager or UserManager()
         self.user_writer = user_writer or UserWriter(self.manager)
-        # self.user_reader = user_reader or UserReader
 
     @property
     def login_status(self) -> FacadeResult:
@@ -55,9 +52,9 @@ class Identity(BaseFacade):
     def change_user_password(
         self, new_password: str, old_password: str
     ) -> FacadeResult:
-        if old_password is None:
-            return self._failure("Old password is required.")
-
+        if not isinstance(old_password, str) or old_password == '':
+            logger.warning("change_user_password: old_password must be a non-empty string")
+            return self._failure("Old password must be a non-empty string.")
         if not self.manager.login_status:
             logger.warning("change_user_password attempted without an active session.")
             return self._failure("User not logged in.")
@@ -79,8 +76,17 @@ class Identity(BaseFacade):
         logger.info("Password changed for user_id=%r", self.manager.user_id)
         return self._success("Password was changed")
 
-    def reset_user_password(self, user_id: str) -> FacadeResult:
-        pass
+    def reset_user_password(
+        self, username: str, backup_phrase: str, new_password: str
+    ) -> FacadeResult:
+        try:
+            new_phrase = self.user_writer.reset_password(username, new_password, backup_phrase)
+        except ValueError as e:
+            logger.warning("reset_user_password failed for username=%r: %s", username, e)
+            return self._failure(str(e))
+
+        logger.info("Password reset via backup phrase for username=%r", username)
+        return self._success("Password was reset.", {"backup_phrase": new_phrase})
 
     def register_user(self, login: str, email: str, password: str) -> FacadeResult:
         """
@@ -94,12 +100,14 @@ class Identity(BaseFacade):
         Returns:
             FacadeResult: A success or failure result indicating the outcome of the registration.
         """
-        user = self.user_writer.prepare_new_user(login, email, password)
+        user, backup_phrase = self.user_writer.prepare_new_user(login, email, password)
         try:
             self.user_writer.save_user(user)
             self.manager.login(login, password)
             logger.info("User %r registered.", login)
-            return self._success("User registered successfully.")
+            return self._success(
+                "User registered successfully.", {"backup_phrase": backup_phrase}
+            )
         except (ValueError, RuntimeError) as e:
             logger.warning("Registration failed for username=%r: %s", login, e)
             return self._failure(str(e))
