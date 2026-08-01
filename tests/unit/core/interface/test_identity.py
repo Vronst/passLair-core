@@ -79,7 +79,7 @@ class TestChangeUserPassword:
     def test_old_password_required(self):
         identity, _, user_writer = make_identity()
 
-        result = identity.change_user_password("new_password", None)
+        result = identity.change_user_password("new_password", None)  # pyright: ignore[reportArgumentType]
 
         assert not result.success
         user_writer.change_password.assert_not_called()

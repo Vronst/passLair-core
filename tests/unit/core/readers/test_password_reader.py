@@ -62,7 +62,7 @@ class TestNegative:
     def test_invalid_init(self):
         """Ensure initialization raises a TypeError if user object doesn't meet requirements."""
         with pytest.raises(TypeError):
-            PasswordReader(None)
+            PasswordReader(None)  # pyright: ignore[reportArgumentType]
 
     def test_get_pass_for_when_service_does_not_exist(self, mock_user_manager):
         """Ensure get_pass_for raises an exception or handles a missing row gracefully."""

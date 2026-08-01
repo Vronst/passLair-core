@@ -126,4 +126,4 @@ class TestNegative:
     def test_init_fails_with_invalid_user(self):
         """Regression guard: UserWriter must depend on AuthenticatedUser, not a concrete class."""
         with pytest.raises(TypeError):
-            UserWriter(user=None)
+            UserWriter(user=None)  # pyright: ignore[reportArgumentType]

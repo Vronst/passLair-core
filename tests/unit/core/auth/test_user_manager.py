@@ -36,8 +36,8 @@ class TestPositive:
 
     def test_logout(self):
         manager = UserManager()
-        manager._UserManager__dek = "some_dek"
-        manager._UserManager__user_id = "some_id"
+        manager._UserManager__dek = "some_dek"  # pyright: ignore[reportAttributeAccessIssue]
+        manager._UserManager__user_id = "some_id"  # pyright: ignore[reportAttributeAccessIssue]
         manager.logout()
 
         assert manager.user_id is None
@@ -48,8 +48,8 @@ class TestPositive:
 
     def test_login_status_true_when_dek_and_user_id_set(self):
         manager = UserManager()
-        manager._UserManager__dek = "some_dek"
-        manager._UserManager__user_id = "some_id"
+        manager._UserManager__dek = "some_dek"  # pyright: ignore[reportAttributeAccessIssue]
+        manager._UserManager__user_id = "some_id"  # pyright: ignore[reportAttributeAccessIssue]
 
         assert manager.login_status is True
 
@@ -60,7 +60,7 @@ class TestPositive:
 
     def test_get_session_key(self):
         manager = UserManager()
-        manager._UserManager__dek = dek
+        manager._UserManager__dek = dek  # pyright: ignore[reportAttributeAccessIssue]
         test_data = manager.get_session_key()
 
         assert test_data == dek
@@ -82,7 +82,7 @@ class TestNegative:
     def test_assign_user_id_manually(self):
         manager = UserManager()
         with pytest.raises(AttributeError):
-            manager.user_id = "some id that is string"
+            manager.user_id = "some id that is string"  # pyright: ignore[reportAttributeAccessIssue]
 
     def test_not_initialized_session(self):
         manager = UserManager()
@@ -91,7 +91,7 @@ class TestNegative:
 
     def test_login_no_user(self):
         manager = UserManager()
-        manager._UserManager__user_id = "some_id"
+        manager._UserManager__user_id = "some_id"  # pyright: ignore[reportAttributeAccessIssue]
         with pytest.raises(RuntimeError):
             manager.login("some_name", "some_password")
 

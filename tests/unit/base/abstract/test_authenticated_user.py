@@ -22,8 +22,8 @@ class TestPositive:
 class TestNegative:
     def test_require_rejects_none(self):
         with pytest.raises(TypeError):
-            AuthenticatedUser.require(None)
+            AuthenticatedUser.require(None)  # pyright: ignore[reportArgumentType]
 
     def test_require_rejects_an_unrelated_object(self):
         with pytest.raises(TypeError):
-            AuthenticatedUser.require(object())
+            AuthenticatedUser.require(object())  # pyright: ignore[reportArgumentType]
