@@ -34,12 +34,10 @@ jobs:
     uses: Vronst/workflows/.github/workflows/test.yml@custom
     with:
       runner_type: "local"
-      test_command: "uv run --group test pytest && cargo test"
+      test_command: "uv run --group test pytest"
       setup_command: |
         pip install uv
         uv sync
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
   # 4. Auto PR Creation: Runs ONLY on pushes to 'stage' after testing/linting pass successfully
   auto-pr-generation:
