@@ -7,10 +7,9 @@ from ...base.base_repository import BaseRepository
 from ...dataclasses.user_data import UserCreation
 from ..auth.credentials import (
     backup_kek_from_phrase,
-    hash_password,
+    hash_new_password,
     new_backup_kek,
     new_dek,
-    new_salt,
     unwrap_dek,
     verify_password,
     wrap_dek,
@@ -46,8 +45,7 @@ class UserWriter(BaseRepository):
 
         dek = unwrap_dek(user.dek, user.dek_nonce, old_kek)
 
-        salt = new_salt()
-        hashed_password, kek = hash_password(new_password, salt)
+        salt, hashed_password, kek = hash_new_password(new_password)
         enc_dek, dek_nonce = wrap_dek(dek, kek)
 
         user.master_password = hashed_password
@@ -81,8 +79,7 @@ class UserWriter(BaseRepository):
         backup_kek = backup_kek_from_phrase(backup_phrase)
         dek = unwrap_dek(user.backup_dek, user.backup_dek_nonce, backup_kek)
 
-        salt = new_salt()
-        hashed_password, kek = hash_password(new_password, salt)
+        salt, hashed_password, kek = hash_new_password(new_password)
         enc_dek, dek_nonce = wrap_dek(dek, kek)
 
         new_kek, new_phrase = new_backup_kek()
@@ -115,8 +112,7 @@ class UserWriter(BaseRepository):
         exactly once.
         """
         logger.debug("Preparing new user data for username=%r", username)
-        salt = new_salt()
-        hashed_password, kek = hash_password(password, salt)
+        salt, hashed_password, kek = hash_new_password(password)
         dek = new_dek()
         encrypted_dek, dek_nonce = wrap_dek(dek, kek)
 

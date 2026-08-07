@@ -11,17 +11,13 @@ KDF/AEAD scheme changes.
 
 import secrets
 
-from passlair_crypto.package import derive_keys
+from passlair_crypto.package import derive_keys, derive_new_keys
 
 from ..crypto import decrypt, encrypt
 from .mnemonic import kek_to_phrase, phrase_to_kek
 
 DEK_SIZE = 32
 SALT_SIZE = 16
-
-
-def new_salt() -> bytes:
-    return secrets.token_bytes(SALT_SIZE)
 
 
 def new_dek() -> bytes:
@@ -43,14 +39,14 @@ def backup_kek_from_phrase(phrase: str) -> bytes:
     return phrase_to_kek(phrase)
 
 
-def hash_password(password: str, salt: bytes) -> tuple[bytes, bytes]:
-    """Derives (password_hash, kek) from a password+salt pair."""
-    return derive_keys(password.encode("utf-8"), salt)
+def hash_new_password(password: str) -> tuple[bytes, bytes, bytes]:
+    """Derives (salt, password_hash, kek) for a new/changed password, with a fresh salt."""
+    return derive_new_keys(password.encode("utf-8"))
 
 
 def verify_password(password: str, salt: bytes, expected_hash: bytes) -> bytes | None:
     """Returns the derived KEK if password matches expected_hash, else None."""
-    password_hash, kek = hash_password(password, salt)
+    password_hash, kek = derive_keys(password.encode("utf-8"), salt)
     if password_hash != expected_hash:
         return None
     return kek
