@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from ...base import SingletonMeta
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseManager(metaclass=SingletonMeta):
-    def __init__(self):
+    def __init__(self) -> None:
         self._engine = None
         self._session_factory = None
 
@@ -28,7 +28,7 @@ class DatabaseManager(metaclass=SingletonMeta):
             self._engine.dispose()
         return True
 
-    def init_sqlite(self, filepath: str | None = None, *, force: bool = False):
+    def init_sqlite(self, filepath: str | None = None, *, force: bool = False) -> None:
         """Initializes a local SQLite database configuration."""
         if not self._reinit_check(force):
             logger.debug("SQLite already initialized, skipping re-init (force=False).")
@@ -53,7 +53,7 @@ class DatabaseManager(metaclass=SingletonMeta):
         database: str,
         *,
         force: bool = False,
-    ):
+    ) -> None:
         """Initializes a networked MariaDB database configuration using the pymysql driver."""
         # URL Format: mariadb+pymysql://user:pass@host:port/dbname
         database_url = (
@@ -82,7 +82,7 @@ class DatabaseManager(metaclass=SingletonMeta):
         self._setup_factory()
         self.create_tables(Base.metadata)
 
-    def _setup_factory(self):
+    def _setup_factory(self) -> None:
         """Internal helper to tie the engine to the session factories."""
         local_factory = sessionmaker(
             autocommit=False,
@@ -93,7 +93,7 @@ class DatabaseManager(metaclass=SingletonMeta):
         # scoped_session ensures thread-safety across your library
         self._session_factory = scoped_session(local_factory)
 
-    def create_tables(self, base_metadata):
+    def create_tables(self, base_metadata: MetaData) -> None:
         """Utility to generate the database schema tables if they don't exist yet."""
         if self._engine is None:
             raise RuntimeError(

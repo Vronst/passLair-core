@@ -7,7 +7,7 @@ from ..writers.password_writer import PasswordWriter
 
 
 class PasswordManager(BaseFacade):
-    def __init__(self, auth: AuthenticatedUser):
+    def __init__(self, auth: AuthenticatedUser) -> None:
         self.auth = auth
         self.pass_reader = PasswordReader(auth)
         self.pass_writer = PasswordWriter(auth)

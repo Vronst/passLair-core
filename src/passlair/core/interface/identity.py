@@ -20,9 +20,9 @@ class Identity(BaseFacade):
         self,
         user_manager: UserManager | None = None,
         user_writer: UserWriter | None = None,
-    ):
-        self.manager = user_manager or UserManager()
-        self.user_writer = user_writer or UserWriter(self.manager)
+    ) -> None:
+        self.manager: UserManager = user_manager or UserManager()
+        self.user_writer: UserWriter = user_writer or UserWriter(self.manager)
 
     @property
     def login_status(self) -> FacadeResult:

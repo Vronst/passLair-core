@@ -1,6 +1,6 @@
 import logging
 from abc import ABC
-from typing import Any, Type, TypeVar
+from typing import TypeVar
 
 from ..core.database.database_manager import db
 
@@ -11,7 +11,7 @@ T = TypeVar("T")
 
 class BaseRepository(ABC):
     @classmethod
-    def _fetch_row(cls, model: Type[T], *, filters: dict[str, Any]) -> T | None:
+    def _fetch_row(cls, model: type[T], *, filters: dict[str, object]) -> T | None:
         # Log filter keys only -- values may include user_id/service names,
         # but could just as easily be extended with sensitive lookups later.
         logger.debug("Fetching %s filtered by %s", model.__name__, list(filters))

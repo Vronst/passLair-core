@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class PasswordWriter(BaseRepository):
-    def __init__(self, user: AuthenticatedUser):
+    def __init__(self, user: AuthenticatedUser) -> None:
         self.user = AuthenticatedUser.require(user)
 
     def save_password(self, service: str, login: str, password: str) -> bool:
@@ -57,7 +57,7 @@ class PasswordWriter(BaseRepository):
         entry = self._fetch_row(
             VaultEntry,
             filters={
-                "service_name": data["service_name"],
+                "service_name": data.service_name,
                 "user_id": self.user.user_id,
             },
         )
@@ -72,9 +72,9 @@ class PasswordWriter(BaseRepository):
         return new_entry
 
     def _update_password(self, data: PasswordCreation, entry: VaultEntry) -> VaultEntry:
-        entry.password = data["password"]
-        entry.login = data["login"]
-        entry.nonce = data["nonce"]
+        entry.password = data.password
+        entry.login = data.login
+        entry.nonce = data.nonce
         return entry
 
     def _new_password(self, data: PasswordCreation) -> VaultEntry:

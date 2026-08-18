@@ -13,6 +13,6 @@ class UserReader(BaseRepository):
         return cls._fetch_row(StandardUser, filters={"username": username})
 
     @classmethod
-    def get_user_by(cls, **kwargs) -> None | StandardUser:
+    def get_user_by(cls, **kwargs: object) -> None | StandardUser:
         logger.debug("Looking up user by %s", list(kwargs))
         return cls._fetch_row(StandardUser, filters={**kwargs})
