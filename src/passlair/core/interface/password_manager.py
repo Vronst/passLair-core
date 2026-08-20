@@ -8,9 +8,9 @@ from ..writers.password_writer import PasswordWriter
 
 class PasswordManager(BaseFacade):
     def __init__(self, auth: AuthenticatedUser) -> None:
-        self.auth = auth
-        self.pass_reader = PasswordReader(auth)
-        self.pass_writer = PasswordWriter(auth)
+        self.auth: AuthenticatedUser = auth
+        self.pass_reader: PasswordReader = PasswordReader(auth)
+        self.pass_writer: PasswordWriter = PasswordWriter(auth)
 
     def get_password_for_service(self, service: str) -> FacadeResult:
         try:

@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from passlair.core.models.standard_user import StandardUser
 from passlair.core.readers.user_reader import UserReader
@@ -8,7 +8,7 @@ from passlair.core.readers.user_reader import UserReader
 
 
 class TestPositive:
-    def test_get_user_by_name(self, mock_user):
+    def test_get_user_by_name(self, mock_user: MagicMock):
         with patch.object(UserReader, "_fetch_row", return_value=mock_user) as fetch:
             test_data = UserReader.get_user_by_name("name")
 
@@ -21,7 +21,7 @@ class TestPositive:
 
         assert test_data is None
 
-    def test_get_user_by(self, mock_user):
+    def test_get_user_by(self, mock_user: MagicMock):
         with patch.object(UserReader, "_fetch_row", return_value=mock_user) as fetch:
             test_data = UserReader.get_user_by(id="secret_id")
 

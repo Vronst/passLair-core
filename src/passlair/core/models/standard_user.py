@@ -8,7 +8,7 @@ from .base import Base
 
 
 class StandardUser(Base):
-    __tablename__ = "standard_users"
+    __tablename__: str = "standard_users"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())

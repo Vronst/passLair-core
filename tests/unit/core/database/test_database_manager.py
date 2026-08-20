@@ -4,9 +4,11 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from passlair.core.database.database_manager import DatabaseManager
+
 
 class TestPositive:
-    def test_init_sqlite_default_path(self, db):
+    def test_init_sqlite_default_path(self, db: DatabaseManager):
         """Verify SQLite initialization constructs the correct URL structure."""
         # TARGET THE LOCAL MODULE NAMESPACE, NOT SALCHEMY DIRECTLY
         target_path = "passlair.core.database.database_manager.create_engine"
@@ -28,7 +30,7 @@ class TestPositive:
                 assert db._engine == mock_engine_instance
                 mock_setup.assert_called_once()
 
-    def test_init_mariadb_pool_configurations(self, db):
+    def test_init_mariadb_pool_configurations(self, db: DatabaseManager):
         """Ensure MariaDB constructs the complex URL string and sets proper pools."""
         target_path = "passlair.core.database.database_manager.create_engine"
 
@@ -57,7 +59,7 @@ class TestPositive:
                 )
                 assert db._engine == mock_engine_instance
 
-    def test_session_successful_commit(self, db):
+    def test_session_successful_commit(self, db: DatabaseManager):
         """Verify healthy sessions yield a working session, commit, and close cleanly."""
         db.init_sqlite(":memory:")  # Fast in-memory DB for actual lifecycle integration
 
@@ -72,13 +74,13 @@ class TestPositive:
 
 
 class TestNegative:
-    def test_session_context_manager_uninitialized_error(self, db):
+    def test_session_context_manager_uninitialized_error(self, db: DatabaseManager):
         """The context manager must fail gracefully if called before initialization."""
         with pytest.raises(RuntimeError, match="DatabaseManager is not initialized"):
             with db.session():
                 pass
 
-    def test_session_rolls_back_on_exception(self, db):
+    def test_session_rolls_back_on_exception(self, db: DatabaseManager):
         """Ensure that if code inside the block crashes, rollback is executed and raised."""
         db.init_sqlite(":memory:")
 

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class PasswordWriter(BaseRepository):
     def __init__(self, user: AuthenticatedUser) -> None:
-        self.user = AuthenticatedUser.require(user)
+        self.user: AuthenticatedUser = AuthenticatedUser.require(user)
 
     def save_password(self, service: str, login: str, password: str) -> bool:
         data = self._prepare_data(service, login, password)
@@ -65,9 +65,6 @@ class PasswordWriter(BaseRepository):
             new_entry = self._new_password(data)
         else:
             new_entry = self._update_password(data, entry)
-
-        if new_entry is None:
-            raise ValueError("Failed to build a vault entry.")
 
         return new_entry
 

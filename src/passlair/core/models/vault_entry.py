@@ -27,7 +27,7 @@ class VaultEntry(Base):
             the encryption of this specific entry. Never reused across entries.
     """
 
-    __tablename__ = "vault_entries"
+    __tablename__: str = "vault_entries"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())

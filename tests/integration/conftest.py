@@ -32,6 +32,7 @@ def register_user():
     data, backup_phrase = UserWriter.prepare_new_user(username, email, password)
     UserWriter.save_user(data)
     user = UserReader.get_user_by_name(username)
+    assert user is not None
 
     yield {
         "username": username,
@@ -42,4 +43,4 @@ def register_user():
     }
 
     with original_db.session() as session:
-        session.query(StandardUser).filter_by(username=username).delete()
+        _ = session.query(StandardUser).filter_by(username=username).delete()

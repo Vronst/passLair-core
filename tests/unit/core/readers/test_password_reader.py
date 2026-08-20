@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -18,11 +18,11 @@ entry = VaultEntry(**data)
 
 
 class TestPositive:
-    def test_init(self, mock_user_manager):
+    def test_init(self, mock_user_manager: MagicMock):
         reader = PasswordReader(mock_user_manager)
         assert reader.user == mock_user_manager
 
-    def test_get_pass_for(self, mock_user_manager):
+    def test_get_pass_for(self, mock_user_manager: MagicMock):
         reader = PasswordReader(mock_user_manager)
         with (
             patch.object(
@@ -38,7 +38,7 @@ class TestPositive:
         retriever.assert_called_once_with(data["service_name"])
         decrypt.assert_called_once_with(password, mock_user_manager.get_session_key())
 
-    def test_decrypt_password(self, mock_user_manager):
+    def test_decrypt_password(self, mock_user_manager: MagicMock):
         reader = PasswordReader(mock_user_manager)
         test_data = reader._decrypt_password(entry, dek)
 
@@ -47,9 +47,10 @@ class TestPositive:
         assert test_data["login"] == data["login"]
         # passlair_crypto's decrypt_password is currently a passthrough mock,
         # so this only proves the plumbing is correct, not real decryption.
+        assert isinstance(data['password'], bytes)
         assert test_data["password"] == data["password"].decode("utf-8")
 
-    def test_retrieve_password(self, mock_user_manager):
+    def test_retrieve_password(self, mock_user_manager: MagicMock):
         reader = PasswordReader(mock_user_manager)
         with patch.object(PasswordReader, "_fetch_row", return_value=entry):
             test_data = reader._retrieve_password(data["service_name"])
@@ -62,18 +63,18 @@ class TestNegative:
     def test_invalid_init(self):
         """Ensure initialization raises a TypeError if user object doesn't meet requirements."""
         with pytest.raises(TypeError):
-            PasswordReader(None)  # pyright: ignore[reportArgumentType]
+            _ = PasswordReader(None)
 
-    def test_get_pass_for_when_service_does_not_exist(self, mock_user_manager):
+    def test_get_pass_for_when_service_does_not_exist(self, mock_user_manager: MagicMock):
         """Ensure get_pass_for raises an exception or handles a missing row gracefully."""
         reader = PasswordReader(mock_user_manager)
         with (
             patch.object(PasswordReader, "_retrieve_password", return_value=None),
             pytest.raises(KeyError),
         ):
-            reader.get_pass_for(data["service_name"])
+            _ = reader.get_pass_for(data["service_name"])
 
-    def test_retrieve_password_returns_none_if_row_missing(self, mock_user_manager):
+    def test_retrieve_password_returns_none_if_row_missing(self, mock_user_manager: MagicMock):
         """Verify that _retrieve_password handles empty database results gracefully."""
         reader = PasswordReader(mock_user_manager)
 

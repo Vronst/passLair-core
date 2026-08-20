@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class PasswordReader(BaseRepository):
     def __init__(self, user: AuthenticatedUser) -> None:
-        self.user = AuthenticatedUser.require(user)
+        self.user: AuthenticatedUser = AuthenticatedUser.require(user)
 
     def get_pass_for(self, service: str) -> dict[str, str]:
         encrypted_password = self._retrieve_password(service)

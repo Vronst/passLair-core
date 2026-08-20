@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
@@ -20,13 +20,13 @@ password_data = PasswordCreation(**data)
 
 
 class TestPositive:
-    def test_init_assign_user_manager(self, mock_user_manager):
+    def test_init_assign_user_manager(self, mock_user_manager: MagicMock):
         writer = PasswordWriter(user=mock_user_manager)
 
         assert writer.user.user_id == "string_id"
         assert writer.user.get_session_key() == "session_key"
 
-    def test_preparing_data(self, mock_user_manager):
+    def test_preparing_data(self, mock_user_manager: MagicMock):
         login, password, service = "login", "password", "service"
         return_values = ("password", b"12")
         writer = PasswordWriter(user=mock_user_manager)
@@ -44,7 +44,9 @@ class TestPositive:
         assert test_data.service_name == service
         assert test_data.nonce == return_values[1]
 
-    def test_save_password(self, mock_user_manager, mock_db_session):
+    def test_save_password(
+        self, mock_user_manager: MagicMock, mock_db_session: tuple[MagicMock, MagicMock]
+    ):
         mock_session, _ = mock_db_session
         writer = PasswordWriter(user=mock_user_manager)
         with (
@@ -73,7 +75,7 @@ class TestPositive:
             password,
         )
 
-    def test_add_or_update(self, mock_user_manager):
+    def test_add_or_update(self, mock_user_manager: MagicMock):
         writer = PasswordWriter(mock_user_manager)
         with (
             patch.object(PasswordWriter, "_fetch_row", return_value=True),
@@ -84,7 +86,7 @@ class TestPositive:
 
         assert test_data
 
-    def test_update_password(self, mock_user_manager):
+    def test_update_password(self, mock_user_manager: MagicMock):
         writer = PasswordWriter(mock_user_manager)
         test_data = writer._update_password(password_data, entry)
 
@@ -92,7 +94,7 @@ class TestPositive:
         assert test_data.nonce == data["nonce"]
         assert test_data.password == data["password"]
 
-    def test_new_password(self, mock_user_manager):
+    def test_new_password(self, mock_user_manager: MagicMock):
         writer = PasswordWriter(mock_user_manager)
         test_data = writer._new_password(password_data)
 
@@ -100,7 +102,7 @@ class TestPositive:
         assert test_data.nonce == data["nonce"]
         assert test_data.password == data["password"]
 
-    def test_encrypt_password(self, mock_user_manager):
+    def test_encrypt_password(self, mock_user_manager: MagicMock):
         """Regression guard: passlair_crypto only accepts real bytes, not bytearray."""
         writer = PasswordWriter(mock_user_manager)
         dek = b"a_real_32_byte_session_key_here"
@@ -118,16 +120,16 @@ class TestNegative:
         """Ensure initialization raises a TypeError if user object doesn't meet requirements."""
         # Testing what happens if None or an invalid type is passed as the user session manager
         with pytest.raises(TypeError):
-            PasswordWriter(user=None)
+            _ = PasswordWriter(user=None)
 
-    def test_preparing_data_with_empty_fields(self, mock_user_manager):
+    def test_preparing_data_with_empty_fields(self, mock_user_manager: MagicMock):
         """Ensure data preparation raises ValueErrors on bad or blank inputs."""
         writer = PasswordWriter(user=mock_user_manager)
 
         with pytest.raises(ValueError):
-            writer._prepare_data(service="", login="my_login", password="password")
+            _ = writer._prepare_data(service="", login="my_login", password="password")
 
-    def test_encrypt_password_fails_if_session_key_invalid(self, mock_user_manager):
+    def test_encrypt_password_fails_if_session_key_invalid(self, mock_user_manager: MagicMock):
         """Verify encryption mechanism crashes gracefully if session key is compromised/empty."""
         writer = PasswordWriter(user=mock_user_manager)
 
@@ -135,10 +137,10 @@ class TestNegative:
         mock_user_manager.get_session_key.return_value = None
 
         with pytest.raises((ValueError, TypeError)):
-            writer._encrypt_password(password, mock_user_manager.get_session_key())
+            _ = writer._encrypt_password(password, mock_user_manager.get_session_key())
 
     def test_save_password_rolls_back_on_db_error(
-        self, mock_user_manager, mock_db_session
+        self, mock_user_manager: MagicMock, mock_db_session: tuple[MagicMock, MagicMock]
     ):
         """Ensure that if the DB breaks down, save_password passes the exception up."""
         mock_session, _ = mock_db_session
@@ -155,13 +157,13 @@ class TestNegative:
             patch("passlair.core.writers.password_writer.db", mock_session),
         ):
             with pytest.raises(SQLAlchemyError, match="DB Operational Error"):
-                writer.save_password(
+                _ = writer.save_password(
                     service=password_data.service_name,
                     login=password_data.login,
                     password=password,
                 )
 
-    def test_add_or_update_routing_failure(self, mock_user_manager):
+    def test_add_or_update_routing_failure(self, mock_user_manager: MagicMock):
         """Verify system response if internal generation steps return incomplete/None objects."""
         writer = PasswordWriter(mock_user_manager)
 
@@ -173,4 +175,4 @@ class TestNegative:
             patch.object(PasswordWriter, "_new_password", return_value=None),
         ):
             with pytest.raises(ValueError, match="Failed to build a vault entry"):
-                writer._add_or_update(password_data)
+                _ = writer._add_or_update(password_data)

@@ -1,3 +1,4 @@
+from typing import override
 import logging
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
@@ -14,6 +15,7 @@ class UserManager(AuthenticatedUser):
         self.__user_id: str | None = None
 
     @property
+    @override
     def user_id(self) -> str | None:
         return self.__user_id
 
@@ -73,6 +75,7 @@ class UserManager(AuthenticatedUser):
         self.__dek = None
         self.__user_id = None
 
+    @override
     def get_session_key(self) -> bytes:
         """Returns the DEK for the short duration of a vault decryption action."""
         if not self.__dek:

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class UserWriter(BaseRepository):
     def __init__(self, user: AuthenticatedUser) -> None:
-        self.user = AuthenticatedUser.require(user)
+        self.user: AuthenticatedUser = AuthenticatedUser.require(user)
 
     def change_password(self, new_password: str, old_password: str) -> None:
         """

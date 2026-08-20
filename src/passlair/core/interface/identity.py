@@ -53,7 +53,7 @@ class Identity(BaseFacade):
     def change_user_password(
         self, new_password: str, old_password: str
     ) -> FacadeResult:
-        if not isinstance(old_password, str) or old_password == "":
+        if not old_password == "":
             logger.warning(
                 "change_user_password: old_password must be a non-empty string"
             )
@@ -114,7 +114,9 @@ class Identity(BaseFacade):
         user, backup_phrase = self.user_writer.prepare_new_user(login, email, password)
         try:
             self.user_writer.save_user(user)
-            self.manager.login(login, password)
+            logged = self.manager.login(login, password)
+            if not logged:
+                logger.warning("Login failed after registration.")
             logger.info("User %r registered.", login)
             return self._success(
                 "User registered successfully.", {"backup_phrase": backup_phrase}

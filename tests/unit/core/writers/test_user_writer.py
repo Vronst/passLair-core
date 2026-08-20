@@ -1,15 +1,18 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
 from passlair.core.auth.credentials import backup_kek_from_phrase, new_dek, wrap_dek
 from passlair.core.writers.user_writer import UserWriter
+from passlair.dataclasses.user_data import UserCreation
 
 
 class TestPositive:
     def test_save_user_successfully_inserts_record(
-        self, mock_db_session, mock_user_data
+        self,
+        mock_db_session: tuple[MagicMock, MagicMock],
+        mock_user_data: UserCreation,
     ):
         """Verify that a brand new user is accurately staged and saved to the DB."""
         mock_session, _ = mock_db_session
@@ -37,7 +40,12 @@ class TestPositive:
         assert len(data.backup_dek_nonce) == 12
         assert len(backup_phrase.split()) == 24
 
-    def test_reset_password(self, mock_user, mock_user_manager, mock_db_session):
+    def test_reset_password(
+        self,
+        mock_user: MagicMock,
+        mock_user_manager: MagicMock,
+        mock_db_session: tuple[MagicMock, MagicMock],
+    ):
         mock_session, _ = mock_db_session
         _, backup_phrase = UserWriter.prepare_new_user(
             "bob", "bob@example.com", "hunter2"
@@ -62,7 +70,12 @@ class TestPositive:
         mock_session.add.assert_called_once_with(mock_user)
         mock_session.commit.assert_called_once()
 
-    def test_change_password(self, mock_user, mock_user_manager, mock_db_session):
+    def test_change_password(
+        self,
+        mock_user: MagicMock,
+        mock_user_manager: MagicMock,
+        mock_db_session: tuple[MagicMock, MagicMock],
+    ):
         mock_session, _ = mock_db_session
         writer = UserWriter(user=mock_user_manager)
 
@@ -75,7 +88,9 @@ class TestPositive:
 
 class TestNegative:
     def test_save_user_raises_on_duplicate_username(
-        self, mock_db_session, mock_user_data
+        self,
+        mock_db_session: tuple[MagicMock, MagicMock],
+        mock_user_data: UserCreation,
     ):
         mock_session, _ = mock_db_session
         mock_session.commit.side_effect = IntegrityError(
@@ -85,7 +100,11 @@ class TestNegative:
         with pytest.raises(ValueError, match="Username already exists"):
             UserWriter.save_user(mock_user_data)
 
-    def test_save_user_raises_on_duplicate_email(self, mock_db_session, mock_user_data):
+    def test_save_user_raises_on_duplicate_email(
+        self,
+        mock_db_session: tuple[MagicMock, MagicMock],
+        mock_user_data: UserCreation,
+    ):
         mock_session, _ = mock_db_session
         mock_session.commit.side_effect = IntegrityError(
             "INSERT", {}, Exception("UNIQUE constraint failed: standard_users.email")
@@ -94,14 +113,16 @@ class TestNegative:
         with pytest.raises(ValueError, match="Email already exists"):
             UserWriter.save_user(mock_user_data)
 
-    def test_change_password_user_not_found(self, mock_user_manager):
+    def test_change_password_user_not_found(self, mock_user_manager: MagicMock):
         writer = UserWriter(user=mock_user_manager)
 
         with patch.object(UserWriter, "_fetch_row", return_value=None):
             with pytest.raises(ValueError, match="User doesn't exists"):
                 writer.change_password("new_password", "old_password")
 
-    def test_change_password_wrong_old_password(self, mock_user, mock_user_manager):
+    def test_change_password_wrong_old_password(
+        self, mock_user: MagicMock, mock_user_manager: MagicMock
+    ):
         mock_user.master_password = b"not-the-derived-hash"
         writer = UserWriter(user=mock_user_manager)
 
@@ -109,21 +130,23 @@ class TestNegative:
             with pytest.raises(ValueError, match="Old password incorrect"):
                 writer.change_password("new_password", "old_password")
 
-    def test_reset_password_user_not_found(self, mock_user_manager):
+    def test_reset_password_user_not_found(self, mock_user_manager: MagicMock):
         writer = UserWriter(user=mock_user_manager)
 
         with patch.object(UserWriter, "_fetch_row", return_value=None):
             with pytest.raises(ValueError, match="User doesn't exists"):
-                writer.reset_password("bob", "new_password", "irrelevant phrase")
+                _ = writer.reset_password("bob", "new_password", "irrelevant phrase")
 
-    def test_reset_password_bad_phrase_rejected(self, mock_user, mock_user_manager):
+    def test_reset_password_bad_phrase_rejected(
+        self, mock_user: MagicMock, mock_user_manager: MagicMock
+    ):
         writer = UserWriter(user=mock_user_manager)
 
         with patch.object(UserWriter, "_fetch_row", return_value=mock_user):
             with pytest.raises(ValueError, match="Backup phrase"):
-                writer.reset_password("bob", "new_password", "not a valid phrase")
+                _ = writer.reset_password("bob", "new_password", "not a valid phrase")
 
     def test_init_fails_with_invalid_user(self):
         """Regression guard: UserWriter must depend on AuthenticatedUser, not a concrete class."""
         with pytest.raises(TypeError):
-            UserWriter(user=None)  # pyright: ignore[reportArgumentType]
+            _ = UserWriter(user=None)

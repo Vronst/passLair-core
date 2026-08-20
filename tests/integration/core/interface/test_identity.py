@@ -3,7 +3,7 @@ from passlair.core.readers.user_reader import UserReader
 
 
 class TestPositive:
-    def test_login_and_logout(self, register_user):
+    def test_login_and_logout(self, register_user: dict[str, str]):
         tested = Identity()
 
         test_result = tested.login(register_user["username"], register_user["password"])
@@ -14,7 +14,7 @@ class TestPositive:
         assert test_result.success
         assert "user_id" not in tested.login_status.data
 
-    def test_change_user_password(self, register_user):
+    def test_change_user_password(self, register_user: dict[str, str]):
         tested = Identity()
         new_password = "new_test_password"
 
@@ -33,6 +33,8 @@ class TestPositive:
         # one yet; salt/dek_nonce being freshly re-randomized on every change
         # is the part of this flow real crypto doesn't affect.
         after = UserReader.get_user_by_name(register_user["username"])
+        assert after is not None
+        assert before is not None
         assert after.salt != before.salt
         assert after.dek_nonce != before.dek_nonce
 
@@ -51,7 +53,7 @@ class TestPositive:
         assert test_result.success
         assert tested.login_status.success
 
-    def test_password_reset(self, register_user):
+    def test_password_reset(self, register_user: dict[str, str]):
         tested = Identity()
         new_password = "recovered_password"
 
@@ -61,8 +63,10 @@ class TestPositive:
             register_user["username"], register_user["backup_phrase"], new_password
         )
         assert result.success
-        assert len(result.data["backup_phrase"].split()) == 24
-        assert result.data["backup_phrase"] != register_user["backup_phrase"]
+        new_backup_phrase = result.data["backup_phrase"]
+        assert isinstance(new_backup_phrase, str)
+        assert len(new_backup_phrase.split()) == 24
+        assert new_backup_phrase != register_user["backup_phrase"]
 
         # passlair_crypto's derive_keys/encrypt_password are currently mocks
         # that ignore their key/nonce inputs (see test_change_user_password),
@@ -70,13 +74,15 @@ class TestPositive:
         # freshly re-randomized on every reset is what real crypto doesn't
         # affect.
         after = UserReader.get_user_by_name(register_user["username"])
+        assert after is not None
+        assert before is not None
         assert after.salt != before.salt
         assert after.dek_nonce != before.dek_nonce
         assert after.backup_dek_nonce != before.backup_dek_nonce
 
         assert tested.login(register_user["username"], new_password).success
 
-    def test_password_reset_wrong_phrase_rejected(self, register_user):
+    def test_password_reset_wrong_phrase_rejected(self, register_user: dict[str, str]):
         tested = Identity()
 
         result = tested.reset_user_password(
@@ -95,7 +101,7 @@ class TestNegative:
         assert not test_result.success
         assert "not logged in" in test_result.messege.lower()
 
-    def test_register_user_with_duplicate_username(self, register_user):
+    def test_register_user_with_duplicate_username(self, register_user: dict[str, str]):
         tested = Identity()
 
         test_result = tested.register_user(

@@ -1,7 +1,8 @@
+from typing import TYPE_CHECKING
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
+from collections.abc import Generator
 
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
@@ -11,11 +12,15 @@ from ..models.base import Base
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
+    from sqlalchemy.orm import scoped_session
+
 
 class DatabaseManager(metaclass=SingletonMeta):
     def __init__(self) -> None:
-        self._engine = None
-        self._session_factory = None
+        self._engine: None | Engine = None
+        self._session_factory: None | scoped_session[Session] = None
 
     def _reinit_check(self, force: bool = False) -> bool:
         if self._engine:

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from passlair.core.interface.identity import Identity
 
 
-def make_identity(**overrides):
+def make_identity(**overrides: MagicMock) -> tuple[Identity, MagicMock, MagicMock]:
     manager = overrides.get("manager", MagicMock())
     user_writer = overrides.get("user_writer", MagicMock())
     return Identity(user_manager=manager, user_writer=user_writer), manager, user_writer
@@ -79,7 +79,7 @@ class TestChangeUserPassword:
     def test_old_password_required(self):
         identity, _, user_writer = make_identity()
 
-        result = identity.change_user_password("new_password", None)  # pyright: ignore[reportArgumentType]
+        result = identity.change_user_password("new_password", None)
 
         assert not result.success
         user_writer.change_password.assert_not_called()
