@@ -16,11 +16,7 @@ class PasswordWriter(BaseRepository):
 
     def save_password(self, service: str, login: str, password: str) -> bool:
         data = self._prepare_data(service, login, password)
-        if not (entry := self._add_or_update(data)):
-            logger.warning(
-                "save_password failed to build an entry for service=%r", service
-            )
-            return False
+        entry = self._add_or_update(data)
 
         with db.session() as session:
             session.add(entry)

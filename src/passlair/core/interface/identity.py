@@ -53,7 +53,7 @@ class Identity(BaseFacade):
     def change_user_password(
         self, new_password: str, old_password: str
     ) -> FacadeResult:
-        if not old_password == "":
+        if not old_password:
             logger.warning(
                 "change_user_password: old_password must be a non-empty string"
             )

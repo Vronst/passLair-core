@@ -38,15 +38,14 @@ class TestPositive:
         assert encrypted_dek != dek
 
     def test_unwrap_dek_calls_through_to_decrypt_password(self):
-        # passlair_crypto's decrypt_password is currently a passthrough mock
-        # (doesn't actually reverse encrypt_password), so this only proves
-        # the plumbing is correct, not real decryption round-tripping.
-        salt, _, kek = hash_new_password("hunter2")
+        # decrypt_password is real AEAD decryption now, so proving the
+        # plumbing is correct means round-tripping through wrap_dek first --
+        # arbitrary ciphertext/nonce/kek would fail the auth tag check.
+        _, _, kek = hash_new_password("hunter2")
+        dek = new_dek()
+        encrypted_dek, nonce = wrap_dek(dek, kek)
 
-        assert (
-            unwrap_dek(b"some-ciphertext", salt[:NONCE_SIZE], kek)
-            == b"some-ciphertext"
-        )
+        assert unwrap_dek(encrypted_dek, nonce, kek) == dek
 
 
 class TestNegative:

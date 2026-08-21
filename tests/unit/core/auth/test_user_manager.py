@@ -18,13 +18,25 @@ class TestPositive:
 
     def test_user_login(self, mock_user: MagicMock):
         manager = UserManager()
-        with patch.object(
-            UserManager, "_verify_password", return_value=(mock_user, b"some_kek")
-        ) as mock:
+        kek = b"some_kek"
+
+        # Unit test of login()'s own wiring: _verify_password is already
+        # mocked out, and unwrap_dek (real AEAD decryption) is mocked too so
+        # this doesn't depend on the crypto backend at all -- that's covered
+        # by test_credentials.py and by the real login in test_identity.py.
+        with (
+            patch.object(
+                UserManager, "_verify_password", return_value=(mock_user, kek)
+            ) as mock_verify,
+            patch(
+                "passlair.core.auth.user_manager.unwrap_dek", return_value=b"some_dek"
+            ) as mock_unwrap,
+        ):
             test_data = manager.login(username, password)
 
         assert test_data
-        mock.assert_called_once_with(username, password)
+        mock_verify.assert_called_once_with(username, password)
+        mock_unwrap.assert_called_once_with(mock_user.dek, mock_user.dek_nonce, kek)
 
     def test_user_login_wrong_password(self, mock_user: MagicMock):
         manager = UserManager()
@@ -67,15 +79,22 @@ class TestPositive:
 
     def test_verify_password(self, mock_user: MagicMock):
         manager = UserManager()
-        with patch.object(
-            UserReader, "get_user_by_name", return_value=mock_user
-        ) as mock:
+        # Unit test of _verify_password()'s own wiring: mock verify_password
+        # (the credentials-module boundary) rather than depending on real
+        # Argon2 succeeding -- that's covered by test_credentials.py.
+        with (
+            patch.object(
+                UserReader, "get_user_by_name", return_value=mock_user
+            ) as mock_reader,
+            patch(
+                "passlair.core.auth.user_manager.verify_password", return_value=b"some_kek"
+            ) as mock_verify,
+        ):
             test_data = manager._verify_password(username, password)
 
-        assert test_data
-        user, _ = test_data
-        assert user.salt == b"salt"
-        mock.assert_called_once_with(username)
+        assert test_data == (mock_user, b"some_kek")
+        mock_reader.assert_called_once_with(username)
+        mock_verify.assert_called_once_with(password, mock_user.salt, mock_user.master_password)
 
 
 class TestNegative:

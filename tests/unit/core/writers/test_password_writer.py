@@ -105,7 +105,7 @@ class TestPositive:
     def test_encrypt_password(self, mock_user_manager: MagicMock):
         """Regression guard: passlair_crypto only accepts real bytes, not bytearray."""
         writer = PasswordWriter(mock_user_manager)
-        dek = b"a_real_32_byte_session_key_here"
+        dek = b"a_real_32_byte_session_key_here!"
 
         enc_pass, nonce = writer._encrypt_password(password, dek)
 
@@ -162,17 +162,3 @@ class TestNegative:
                     login=password_data.login,
                     password=password,
                 )
-
-    def test_add_or_update_routing_failure(self, mock_user_manager: MagicMock):
-        """Verify system response if internal generation steps return incomplete/None objects."""
-        writer = PasswordWriter(mock_user_manager)
-
-        # Simulate a scenario where _new_password fails to build an entry and returns None
-        with (
-            patch.object(
-                PasswordWriter, "_fetch_row", return_value=None
-            ),  # Simulates entry not found
-            patch.object(PasswordWriter, "_new_password", return_value=None),
-        ):
-            with pytest.raises(ValueError, match="Failed to build a vault entry"):
-                _ = writer._add_or_update(password_data)

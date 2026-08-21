@@ -40,15 +40,18 @@ class TestPositive:
 
     def test_decrypt_password(self, mock_user_manager: MagicMock):
         reader = PasswordReader(mock_user_manager)
-        test_data = reader._decrypt_password(entry, dek)
 
-        assert "login" in test_data
-        assert "password" in test_data
-        assert test_data["login"] == data["login"]
-        # passlair_crypto's decrypt_password is currently a passthrough mock,
-        # so this only proves the plumbing is correct, not real decryption.
-        assert isinstance(data['password'], bytes)
-        assert test_data["password"] == data["password"].decode("utf-8")
+        # Unit test of _decrypt_password()'s own wiring: mock decrypt (the
+        # crypto-module boundary) rather than depending on real AEAD
+        # decryption succeeding -- that's covered by test_crypto.py.
+        with patch(
+            "passlair.core.readers.password_reader.decrypt",
+            return_value=password.encode("utf-8"),
+        ) as mock_decrypt:
+            test_data = reader._decrypt_password(entry, dek)
+
+        mock_decrypt.assert_called_once_with(entry.password, entry.nonce, dek)
+        assert test_data == {"login": data["login"], "password": password}
 
     def test_retrieve_password(self, mock_user_manager: MagicMock):
         reader = PasswordReader(mock_user_manager)

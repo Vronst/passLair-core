@@ -2,7 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from passlair.core.auth.credentials import DEK_SIZE, SALT_SIZE
 from passlair.core.auth.user_manager import UserManager
+from passlair.core.crypto import NONCE_SIZE
 from passlair.core.models.standard_user import StandardUser
 from passlair.dataclasses.user_data import UserCreation
 
@@ -37,18 +39,25 @@ def mock_user_data():
 
 @pytest.fixture
 def mock_user():
-    """Generates StandarUser mock for tests."""
+    """Generates StandarUser mock for tests.
+
+    salt/dek/dek_nonce/backup_dek/backup_dek_nonce are sized correctly for
+    real passlair_crypto (16/32/12/32/12 bytes respectively) but are
+    otherwise arbitrary placeholders -- they don't decrypt to anything.
+    Tests exercising verify_password/unwrap_dek/etc. should mock those
+    functions at the point of use rather than relying on real crypto here
+    (see test_change_password, test_verify_password) -- real crypto against
+    this module's composition belongs in test_credentials.py/test_crypto.py,
+    and real end-to-end roundtrips belong in the integration tests.
+    """
     mock = MagicMock(spec=StandardUser)
     mock.id = "secret_id"
-    # passlair_crypto's derive_keys is currently a stub returning a constant
-    # hash (vec![1u8; 32]); this must match it for "correct password" tests
-    # to be meaningful until real crypto lands.
     mock.master_password = bytes([1] * 32)
-    mock.salt = b"salt"
-    mock.dek = b"dek"
-    mock.dek_nonce = b"dek_nonce_12"
-    mock.backup_dek = b"backup_dek"
-    mock.backup_dek_nonce = b"backup_dek_nonce_12"
+    mock.salt = b"s" * SALT_SIZE
+    mock.dek = b"d" * DEK_SIZE
+    mock.dek_nonce = b"n" * NONCE_SIZE
+    mock.backup_dek = b"b" * DEK_SIZE
+    mock.backup_dek_nonce = b"m" * NONCE_SIZE
     return mock
 
 
