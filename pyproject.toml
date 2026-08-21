@@ -12,6 +12,7 @@ dependencies = [
     "passlair-crypto",
     "pydantic>=2.13.4",
     "pymysql[rsa]>=1.2.0",
+    "pyperclip>=1.11.0",
     "sqlalchemy>=2.0.49",
 ]
 
@@ -36,14 +37,7 @@ executionEnvironments = [
     # unittest.mock.MagicMock attribute access is untyped by design, so
     # reportAny fires on nearly every mock interaction in the test suite --
     # not worth chasing there. src/ keeps the default (reportAny stays on).
-    { root = "tests",
-        reportAny = false,
-        reportPrivateUsage = false,
-        reportArgumentType = false,
-        reportAttributeAccessIssue = false,
-        reportUnknownMemberType = false,
-        reportUnusedParameter = false,
-    },
+    { root = "tests", reportAny = false, reportPrivateUsage = false, reportArgumentType = false, reportAttributeAccessIssue = false, reportUnknownMemberType = false, reportUnusedParameter = false },
 ]
 
 [tool.pytest.ini_options]
