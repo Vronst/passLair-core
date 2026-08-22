@@ -40,6 +40,17 @@ jobs:
         PYTHON_MYPY_CONFIG_FILE=pyproject.toml
         VALIDATE_MARKDOWN=true
         VALIDATE_YAML_PRETTIER=true
+        # Super-Linter resolves *_CONFIG_FILE names under LINTER_RULES_PATH,
+        # which defaults to ".github/linters". Our pyproject.toml lives at
+        # the repo root, so without this it looks for
+        # .github/linters/pyproject.toml, doesn't find it, falls back to the
+        # container's own default template (which has no mypy config of that
+        # name either), and dies with:
+        #   PYTHON_MYPY_LINTER_RULES rules file
+        #   (/action/lib/.automation/pyproject.toml) doesn't exist.
+        # Pointing LINTER_RULES_PATH at the repo root fixes resolution for
+        # every *_CONFIG_FILE override above.
+        LINTER_RULES_PATH=.
 
   # 3. Testing: Runs on normal branch pushes and PRs
   testing:
