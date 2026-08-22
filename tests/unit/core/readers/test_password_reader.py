@@ -17,6 +17,16 @@ data = {
 entry = VaultEntry(**data)
 
 
+@pytest.fixture
+def mock_password_reader_db():
+    """Abstracts the context-managed db.session() nesting for get_all_passwords."""
+    with patch("passlair.core.readers.password_reader.db") as mock_db:
+        mock_session = MagicMock()
+        mock_db.session.return_value.__enter__.return_value = mock_session
+        mock_db.session.return_value.__exit__.return_value = False
+        yield mock_db, mock_session
+
+
 class TestPositive:
     def test_init(self, mock_user_manager: MagicMock):
         reader = PasswordReader(mock_user_manager)
@@ -61,19 +71,17 @@ class TestPositive:
         # TODO: maybe more asserts?
         assert isinstance(test_data, VaultEntry)
 
-    def test_get_all_passwords(self, mock_user_manager: MagicMock):
+    def test_get_all_passwords(
+        self, mock_user_manager: MagicMock, mock_password_reader_db
+    ):
         reader = PasswordReader(mock_user_manager)
         entries = [entry, VaultEntry(**data)]
+        _, mock_session = mock_password_reader_db
+        mock_session.query.return_value.filter_by.return_value.all.return_value = (
+            entries
+        )
 
-        with patch("passlair.core.readers.password_reader.db") as mock_db:
-            mock_session = MagicMock()
-            mock_db.session.return_value.__enter__.return_value = mock_session
-            mock_db.session.return_value.__exit__.return_value = False
-            mock_session.query.return_value.filter_by.return_value.all.return_value = (
-                entries
-            )
-
-            test_data = reader.get_all_passwords()
+        test_data = reader.get_all_passwords()
 
         assert test_data == entries
         mock_user_manager.get_session_key.assert_called_once()
@@ -83,21 +91,15 @@ class TestPositive:
         )
 
     def test_get_all_passwords_empty_vault_returns_empty_list(
-        self, mock_user_manager: MagicMock
+        self, mock_user_manager: MagicMock, mock_password_reader_db
     ):
         """An authenticated user with no saved passwords is a normal state,
         not a failure -- it must not raise."""
         reader = PasswordReader(mock_user_manager)
+        _, mock_session = mock_password_reader_db
+        mock_session.query.return_value.filter_by.return_value.all.return_value = []
 
-        with patch("passlair.core.readers.password_reader.db") as mock_db:
-            mock_session = MagicMock()
-            mock_db.session.return_value.__enter__.return_value = mock_session
-            mock_db.session.return_value.__exit__.return_value = False
-            mock_session.query.return_value.filter_by.return_value.all.return_value = (
-                []
-            )
-
-            test_data = reader.get_all_passwords()
+        test_data = reader.get_all_passwords()
 
         assert test_data == []
 
@@ -129,18 +131,18 @@ class TestNegative:
             assert test_data is None
 
     def test_get_all_passwords_without_active_session_raises_permission_error(
-        self, mock_user_manager: MagicMock
+        self, mock_user_manager: MagicMock, mock_password_reader_db
     ):
         """No active session must be distinguishable from an empty vault --
         both would otherwise hit the DB with user_id=None and come back
         empty, so this has to be rejected before the query runs."""
         reader = PasswordReader(mock_user_manager)
+        mock_db, _ = mock_password_reader_db
         mock_user_manager.get_session_key.side_effect = PermissionError(
             "No active secure session. Please log in."
         )
 
-        with patch("passlair.core.readers.password_reader.db") as mock_db:
-            with pytest.raises(PermissionError):
-                _ = reader.get_all_passwords()
+        with pytest.raises(PermissionError):
+            _ = reader.get_all_passwords()
 
-            mock_db.session.assert_not_called()
+        mock_db.session.assert_not_called()
