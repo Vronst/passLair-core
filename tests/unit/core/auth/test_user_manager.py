@@ -87,14 +87,17 @@ class TestPositive:
                 UserReader, "get_user_by_name", return_value=mock_user
             ) as mock_reader,
             patch(
-                "passlair.core.auth.user_manager.verify_password", return_value=b"some_kek"
+                "passlair.core.auth.user_manager.verify_password",
+                return_value=b"some_kek",
             ) as mock_verify,
         ):
             test_data = manager._verify_password(username, password)
 
         assert test_data == (mock_user, b"some_kek")
         mock_reader.assert_called_once_with(username)
-        mock_verify.assert_called_once_with(password, mock_user.salt, mock_user.master_password)
+        mock_verify.assert_called_once_with(
+            password, mock_user.salt, mock_user.master_password
+        )
 
 
 class TestNegative:

@@ -14,7 +14,8 @@ def set_up_db():
     original_db.init_sqlite(":memory:")
     return original_db
 
-def _register_user(username: str, email: str, password: str = 'test_password'):
+
+def _register_user(username: str, email: str, password: str = "test_password"):
     """
     Registers a real user through the actual UserWriter pipeline (so the
     stored master_password/dek are consistent with what login/change_password
@@ -42,6 +43,7 @@ def _register_user(username: str, email: str, password: str = 'test_password'):
     with original_db.session() as session:
         _ = session.query(StandardUser).filter_by(username=username).delete()
 
+
 @pytest.fixture(autouse=False)
 def register_user() -> Generator[dict[str, str], None, None]:
     username = "test_user"
@@ -60,27 +62,27 @@ def register_user2() -> Generator[dict[str, str], None, None]:
 
 @pytest.fixture(autouse=False)
 def user_manager_with_passwords(
-    register_user: dict[str, str]
+    register_user: dict[str, str],
 ) -> tuple[UserManager, list[dict[str, str]]]:
     passwords = [
         {
-            'service': 'service1',
-            'login': 'login1',
-            'password': 'password1',
+            "service": "service1",
+            "login": "login1",
+            "password": "password1",
         },
         {
-            'service': 'service2',
-            'login': 'login2',
-            'password': 'password2',
+            "service": "service2",
+            "login": "login2",
+            "password": "password2",
         },
         {
-            'service': 'service3',
-            'login': 'login3',
-            'password': 'password3',
-        }
+            "service": "service3",
+            "login": "login3",
+            "password": "password3",
+        },
     ]
-    username = register_user['username']
-    password = register_user['password']
+    username = register_user["username"]
+    password = register_user["password"]
     manager = UserManager()
     assert manager.login(username, password)
 

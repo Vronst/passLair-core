@@ -129,7 +129,9 @@ class TestNegative:
         with pytest.raises(ValueError):
             _ = writer._prepare_data(service="", login="my_login", password="password")
 
-    def test_encrypt_password_fails_if_session_key_invalid(self, mock_user_manager: MagicMock):
+    def test_encrypt_password_fails_if_session_key_invalid(
+        self, mock_user_manager: MagicMock
+    ):
         """Verify encryption mechanism crashes gracefully if session key is compromised/empty."""
         writer = PasswordWriter(user=mock_user_manager)
 

@@ -64,7 +64,8 @@ class TestPositive:
                 return_value=b"backup_kek",
             ) as mock_phrase_to_kek,
             patch(
-                "passlair.core.writers.user_writer.unwrap_dek", return_value=b"plain_dek"
+                "passlair.core.writers.user_writer.unwrap_dek",
+                return_value=b"plain_dek",
             ) as mock_unwrap,
             patch(
                 "passlair.core.writers.user_writer.hash_new_password",
@@ -76,10 +77,15 @@ class TestPositive:
             ) as mock_new_backup_kek,
             patch(
                 "passlair.core.writers.user_writer.wrap_dek",
-                side_effect=[(b"enc_dek", b"dek_nonce"), (b"enc_backup_dek", b"backup_nonce")],
+                side_effect=[
+                    (b"enc_dek", b"dek_nonce"),
+                    (b"enc_backup_dek", b"backup_nonce"),
+                ],
             ) as mock_wrap,
         ):
-            new_phrase = writer.reset_password("bob", "new_password", "old backup phrase")
+            new_phrase = writer.reset_password(
+                "bob", "new_password", "old backup phrase"
+            )
 
         assert new_phrase == "new backup phrase"
         mock_phrase_to_kek.assert_called_once_with("old backup phrase")
@@ -145,7 +151,9 @@ class TestPositive:
         mock_verify.assert_called_once_with(
             "old_password", original_salt, original_master_password
         )
-        mock_unwrap.assert_called_once_with(original_dek, original_dek_nonce, b"old_kek")
+        mock_unwrap.assert_called_once_with(
+            original_dek, original_dek_nonce, b"old_kek"
+        )
         mock_hash.assert_called_once_with("new_password")
         mock_wrap.assert_called_once_with(b"plain_dek", b"new_kek")
         assert mock_user.master_password == b"new_hash"

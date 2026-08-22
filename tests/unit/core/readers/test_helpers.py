@@ -11,7 +11,8 @@ class TestPositive:
         with (
             patch.object(UserReader, "get_user_by", return_value=mock_user),
             patch(
-                "passlair.core.readers.helpers.verify_password", return_value=b"some_kek"
+                "passlair.core.readers.helpers.verify_password",
+                return_value=b"some_kek",
             ) as mock_verify,
         ):
             assert compare_passwords(user_id="secret_id", password="some_password")

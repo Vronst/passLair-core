@@ -110,7 +110,9 @@ class TestNegative:
         with pytest.raises(TypeError):
             _ = PasswordReader(None)
 
-    def test_get_pass_for_when_service_does_not_exist(self, mock_user_manager: MagicMock):
+    def test_get_pass_for_when_service_does_not_exist(
+        self, mock_user_manager: MagicMock
+    ):
         """Ensure get_pass_for raises an exception or handles a missing row gracefully."""
         reader = PasswordReader(mock_user_manager)
         with (
@@ -119,7 +121,9 @@ class TestNegative:
         ):
             _ = reader.get_pass_for(data["service_name"])
 
-    def test_retrieve_password_returns_none_if_row_missing(self, mock_user_manager: MagicMock):
+    def test_retrieve_password_returns_none_if_row_missing(
+        self, mock_user_manager: MagicMock
+    ):
         """Verify that _retrieve_password handles empty database results gracefully."""
         reader = PasswordReader(mock_user_manager)
 

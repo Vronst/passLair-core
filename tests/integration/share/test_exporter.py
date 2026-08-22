@@ -11,9 +11,7 @@ from passlair.core.auth.user_manager import UserManager
 
 class TestPositive:
     def compare_output(
-        self,
-        output: dict[str, str],
-        passwords: list[dict[str, str]]
+        self, output: dict[str, str], passwords: list[dict[str, str]]
     ) -> None:
         for credentials in passwords:
             service = credentials["service"]
@@ -26,8 +24,7 @@ class TestPositive:
             assert output[service]["password"] == expected_password
 
     def test_exporter_retrieve_passwords(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]]
+        self, user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]]
     ) -> None:
         user_manager, passwords = user_manager_with_passwords
         exporter = Exporter(user_manager)
@@ -151,13 +148,15 @@ class TestPositive:
 class TestNegative:
     def make_exporter_for_empty_vault(self, register_user2: dict[str, str]) -> Exporter:
         user_manager = UserManager()
-        assert user_manager.login(register_user2["username"], register_user2["password"])
+        assert user_manager.login(
+            register_user2["username"], register_user2["password"]
+        )
         return Exporter(user_manager)
 
     def test_exporter_retrieve_passwords(
         self,
         user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        register_user2: dict[str, str]
+        register_user2: dict[str, str],
     ) -> None:
         exporter = self.make_exporter_for_empty_vault(register_user2)
 
