@@ -209,4 +209,4 @@ class TestNegative:
         exporter = Exporter(user_manager)
 
         with pytest.raises(PermissionError):
-            exporter._retrieve_passwords()
+            _ = exporter._retrieve_passwords()

@@ -34,7 +34,7 @@ class PasswordReader(BaseRepository):
         # active session -- calling it here is what lets an empty vault and
         # "not logged in" be told apart, since both would otherwise produce
         # the same empty query result below.
-        self.user.get_session_key()
+        _ = self.user.get_session_key()
 
         with db.session() as session:
             result = session.query(VaultEntry).filter_by(user_id=self.user.user_id).all()
