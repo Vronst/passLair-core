@@ -1,35 +1,80 @@
+from typing import TYPE_CHECKING
+import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
+from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
-from ...metaclasses import SingletonMeta
+from ...base import SingletonMeta
+from ..models.base import Base
+
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
+    from sqlalchemy.orm import scoped_session
 
 
 class DatabaseManager(metaclass=SingletonMeta):
-    def __init__(self):
-        self._engine = None
-        self._session_factory = None
+    def __init__(self) -> None:
+        self._engine: None | Engine = None
+        self._session_factory: None | scoped_session[Session] = None
 
-    def init_sqlite(self, filepath: str | None = None):
+    def _reinit_check(self, force: bool = False) -> bool:
+        if self._engine:
+            if not force:
+                return False
+
+            if self._session_factory:
+                self._session_factory.remove()
+
+            self._engine.dispose()
+        return True
+
+    def init_sqlite(self, filepath: str | None = None, *, force: bool = False) -> None:
         """Initializes a local SQLite database configuration."""
+        if not self._reinit_check(force):
+            logger.debug("SQLite already initialized, skipping re-init (force=False).")
+            return
+
         filepath = filepath or str(Path(__file__).parents[4] / "passLair_db.db")
         database_url = f"sqlite:///{filepath}"
+        logger.info("Initializing SQLite database at %s", filepath)
 
         self._engine = create_engine(
             database_url, connect_args={"check_same_thread": False}
         )
         self._setup_factory()
+        self.create_tables(Base.metadata)
 
     def init_mariadb(
-        self, username: str, password_str: str, host: str, port: int, database: str
-    ):
+        self,
+        username: str,
+        password_str: str,
+        host: str,
+        port: int,
+        database: str,
+        *,
+        force: bool = False,
+    ) -> None:
         """Initializes a networked MariaDB database configuration using the pymysql driver."""
         # URL Format: mariadb+pymysql://user:pass@host:port/dbname
         database_url = (
             f"mariadb+pymysql://{username}:{password_str}@{host}:{port}/{database}"
+        )
+        if not self._reinit_check(force):
+            logger.debug("MariaDB already initialized, skipping re-init (force=False).")
+            return
+
+        # Never log database_url directly -- it embeds password_str in cleartext.
+        logger.info(
+            "Initializing MariaDB connection to %s:%s/%s as %s",
+            host,
+            port,
+            database,
+            username,
         )
 
         self._engine = create_engine(
@@ -40,16 +85,20 @@ class DatabaseManager(metaclass=SingletonMeta):
             pool_pre_ping=True,  # Checks if connection is alive before issuing queries
         )
         self._setup_factory()
+        self.create_tables(Base.metadata)
 
-    def _setup_factory(self):
+    def _setup_factory(self) -> None:
         """Internal helper to tie the engine to the session factories."""
         local_factory = sessionmaker(
-            autocommit=False, autoflush=False, bind=self._engine
+            autocommit=False,
+            autoflush=False,
+            bind=self._engine,
+            expire_on_commit=False,
         )
         # scoped_session ensures thread-safety across your library
         self._session_factory = scoped_session(local_factory)
 
-    def create_tables(self, base_metadata):
+    def create_tables(self, base_metadata: MetaData) -> None:
         """Utility to generate the database schema tables if they don't exist yet."""
         if self._engine is None:
             raise RuntimeError(
@@ -73,6 +122,7 @@ class DatabaseManager(metaclass=SingletonMeta):
             yield db_session
             db_session.commit()
         except Exception:
+            logger.exception("Session raised, rolling back transaction.")
             db_session.rollback()
             raise
         finally:

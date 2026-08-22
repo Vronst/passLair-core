@@ -8,6 +8,11 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "mnemonic>=0.21",
+    "passlair-crypto",
+    "pydantic>=2.13.4",
+    "pymysql[rsa]>=1.2.0",
+    "pyperclip>=1.11.0",
     "sqlalchemy>=2.0.49",
 ]
 
@@ -16,7 +21,56 @@ requires = ["uv_build>=0.11.14,<0.12.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
+lint = [
+    "basedpyright>=1.39.10",
+]
 test = [
     "pytest>=9.0.3",
+    "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
 ]
+
+[tool.uv.sources]
+passlair-crypto = { git = "https://github.com/Vronst/passLair-crypto", branch = "main" }
+
+[tool.basedpyright]
+executionEnvironments = [
+    # unittest.mock.MagicMock attribute access is untyped by design, so
+    # reportAny fires on nearly every mock interaction in the test suite --
+    # not worth chasing there. src/ keeps the default (reportAny stays on).
+    { root = "tests", reportAny = false, reportPrivateUsage = false, reportArgumentType = false, reportAttributeAccessIssue = false, reportUnknownMemberType = false, reportUnusedParameter = false },
+]
+
+[tool.mypy]
+# Mirrors the basedpyright executionEnvironments override below: mock-heavy
+# test code trips type checks that aren't meaningful there (a MagicMock
+# stands in for anything, dict literals mixing str/bytes values get widened
+# to their nearest common supertype, patched attributes are typed as the
+# original callable/class rather than as a mock). src/ keeps full strictness.
+#
+# mypy here exists only to give Super-Linter a Python type checker (it
+# doesn't ship basedpyright, our actual local/CI type checker -- see
+# .github/workflows/CiCd.yml). It runs in Super-Linter's own bare
+# container, which has none of this project's dependencies installed, so
+# every third-party import (pydantic, sqlalchemy, pytest, mnemonic,
+# passlair_crypto, pyperclip, ...) comes back as import-not-found there
+# even though it resolves fine wherever the project's actual venv is
+# present. Suppress that globally rather than one `[[tool.mypy.overrides]]`
+# module at a time.
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# There's no tests/__init__.py, so mypy doesn't resolve these under a
+# "tests." prefix -- it names them by their path relative to tests/ instead
+# (e.g. tests/unit/core/test_crypto.py -> module "unit.core.test_crypto").
+module = ["unit.*", "integration.*", "conftest"]
+disable_error_code = ["arg-type", "index", "attr-defined"]
+
+[tool.pytest.ini_options]
+# Surfaces our logger.debug/info/warning calls in the "Captured log call"
+# section pytest attaches to failing tests, without printing anything for
+# tests that pass. Use `-o log_cli=true` on the command line to also stream
+# logs live while a test is running.
+log_level = "DEBUG"
+log_format = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
+log_date_format = "%H:%M:%S"

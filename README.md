@@ -1,1 +1,3 @@
 # password-manager
+
+Clearing ram
