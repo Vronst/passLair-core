@@ -47,19 +47,24 @@ executionEnvironments = [
 # stands in for anything, dict literals mixing str/bytes values get widened
 # to their nearest common supertype, patched attributes are typed as the
 # original callable/class rather than as a mock). src/ keeps full strictness.
+#
+# mypy here exists only to give Super-Linter a Python type checker (it
+# doesn't ship basedpyright, our actual local/CI type checker -- see
+# .github/workflows/CiCd.yml). It runs in Super-Linter's own bare
+# container, which has none of this project's dependencies installed, so
+# every third-party import (pydantic, sqlalchemy, pytest, mnemonic,
+# passlair_crypto, pyperclip, ...) comes back as import-not-found there
+# even though it resolves fine wherever the project's actual venv is
+# present. Suppress that globally rather than one `[[tool.mypy.overrides]]`
+# module at a time.
+ignore_missing_imports = true
+
 [[tool.mypy.overrides]]
 # There's no tests/__init__.py, so mypy doesn't resolve these under a
 # "tests." prefix -- it names them by their path relative to tests/ instead
 # (e.g. tests/unit/core/test_crypto.py -> module "unit.core.test_crypto").
 module = ["unit.*", "integration.*", "conftest"]
 disable_error_code = ["arg-type", "index", "attr-defined"]
-
-[[tool.mypy.overrides]]
-# pyperclip ships no type stubs; Super-Linter's mypy runs in its own
-# container rather than this project's venv, so a types-pyperclip dev
-# dependency wouldn't reliably reach it -- suppress at the config level.
-module = "pyperclip"
-ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 # Surfaces our logger.debug/info/warning calls in the "Captured log call"
