@@ -61,6 +61,46 @@ class TestPositive:
         # TODO: maybe more asserts?
         assert isinstance(test_data, VaultEntry)
 
+    def test_get_all_passwords(self, mock_user_manager: MagicMock):
+        reader = PasswordReader(mock_user_manager)
+        entries = [entry, VaultEntry(**data)]
+
+        with patch("passlair.core.readers.password_reader.db") as mock_db:
+            mock_session = MagicMock()
+            mock_db.session.return_value.__enter__.return_value = mock_session
+            mock_db.session.return_value.__exit__.return_value = False
+            mock_session.query.return_value.filter_by.return_value.all.return_value = (
+                entries
+            )
+
+            test_data = reader.get_all_passwords()
+
+        assert test_data == entries
+        mock_user_manager.get_session_key.assert_called_once()
+        mock_session.query.assert_called_once_with(VaultEntry)
+        mock_session.query.return_value.filter_by.assert_called_once_with(
+            user_id=mock_user_manager.user_id
+        )
+
+    def test_get_all_passwords_empty_vault_returns_empty_list(
+        self, mock_user_manager: MagicMock
+    ):
+        """An authenticated user with no saved passwords is a normal state,
+        not a failure -- it must not raise."""
+        reader = PasswordReader(mock_user_manager)
+
+        with patch("passlair.core.readers.password_reader.db") as mock_db:
+            mock_session = MagicMock()
+            mock_db.session.return_value.__enter__.return_value = mock_session
+            mock_db.session.return_value.__exit__.return_value = False
+            mock_session.query.return_value.filter_by.return_value.all.return_value = (
+                []
+            )
+
+            test_data = reader.get_all_passwords()
+
+        assert test_data == []
+
 
 class TestNegative:
     def test_invalid_init(self):
@@ -87,3 +127,20 @@ class TestNegative:
 
             # If your architecture returns None instead of raising an error here
             assert test_data is None
+
+    def test_get_all_passwords_without_active_session_raises_permission_error(
+        self, mock_user_manager: MagicMock
+    ):
+        """No active session must be distinguishable from an empty vault --
+        both would otherwise hit the DB with user_id=None and come back
+        empty, so this has to be rejected before the query runs."""
+        reader = PasswordReader(mock_user_manager)
+        mock_user_manager.get_session_key.side_effect = PermissionError(
+            "No active secure session. Please log in."
+        )
+
+        with patch("passlair.core.readers.password_reader.db") as mock_db:
+            with pytest.raises(PermissionError):
+                _ = reader.get_all_passwords()
+
+            mock_db.session.assert_not_called()
