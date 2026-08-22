@@ -24,9 +24,21 @@ jobs:
     uses: Vronst/workflows/.github/workflows/autolabel.yml@main
 
   # 2. Linting: Runs on normal branch pushes and PRs
+  # Opts Super-Linter into just ruff + mypy (Python; mypy stands in for
+  # basedpyright since basedpyright itself isn't one of Super-Linter's
+  # linters), markdownlint (Markdown), and Prettier (YAML, the only other
+  # Prettier-applicable format in this repo). Setting any VALIDATE_* flips
+  # Super-Linter from "run everything detected" into opt-in mode, so leaving
+  # the rest unset is what disables them.
   linting:
     if: github.ref_type != 'tag'
     uses: Vronst/workflows/.github/workflows/lint.yml@main
+    with:
+      linter_env: |
+        VALIDATE_PYTHON_RUFF=true
+        VALIDATE_PYTHON_MYPY=true
+        VALIDATE_MARKDOWN=true
+        VALIDATE_YAML_PRETTIER=true
 
   # 3. Testing: Runs on normal branch pushes and PRs
   testing:

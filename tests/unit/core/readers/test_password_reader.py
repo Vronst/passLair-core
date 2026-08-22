@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,7 +19,7 @@ entry = VaultEntry(**data)
 
 
 @pytest.fixture
-def mock_password_reader_db():
+def mock_password_reader_db() -> Generator[tuple[MagicMock, MagicMock], None, None]:
     """Abstracts the context-managed db.session() nesting for get_all_passwords."""
     with patch("passlair.core.readers.password_reader.db") as mock_db:
         mock_session = MagicMock()
@@ -72,7 +73,9 @@ class TestPositive:
         assert isinstance(test_data, VaultEntry)
 
     def test_get_all_passwords(
-        self, mock_user_manager: MagicMock, mock_password_reader_db
+        self,
+        mock_user_manager: MagicMock,
+        mock_password_reader_db: tuple[MagicMock, MagicMock],
     ):
         reader = PasswordReader(mock_user_manager)
         entries = [entry, VaultEntry(**data)]
@@ -91,7 +94,9 @@ class TestPositive:
         )
 
     def test_get_all_passwords_empty_vault_returns_empty_list(
-        self, mock_user_manager: MagicMock, mock_password_reader_db
+        self,
+        mock_user_manager: MagicMock,
+        mock_password_reader_db: tuple[MagicMock, MagicMock],
     ):
         """An authenticated user with no saved passwords is a normal state,
         not a failure -- it must not raise."""
@@ -135,7 +140,9 @@ class TestNegative:
             assert test_data is None
 
     def test_get_all_passwords_without_active_session_raises_permission_error(
-        self, mock_user_manager: MagicMock, mock_password_reader_db
+        self,
+        mock_user_manager: MagicMock,
+        mock_password_reader_db: tuple[MagicMock, MagicMock],
     ):
         """No active session must be distinguishable from an empty vault --
         both would otherwise hit the DB with user_id=None and come back
