@@ -37,6 +37,7 @@ jobs:
       linter_env: |
         VALIDATE_PYTHON_RUFF=true
         VALIDATE_PYTHON_MYPY=true
+        PYTHON_MYPY_CONFIG_FILE=pyproject.toml
         VALIDATE_MARKDOWN=true
         VALIDATE_YAML_PRETTIER=true
 
@@ -46,7 +47,10 @@ jobs:
     uses: Vronst/workflows/.github/workflows/test.yml@main
     with:
       runner_type: "local"
-      test_command: "uv run --group test pytest"
+      # 90% is a floor below the current ~95% baseline (uv run --with
+      # pytest-cov pytest --cov=passlair --cov-report=term-missing), giving
+      # headroom for incidental drops while still catching a real regression.
+      test_command: "uv run --group test pytest --cov=passlair --cov-report=term-missing --cov-fail-under=90"
       setup_command: |
         pip install uv
         uv sync

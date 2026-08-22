@@ -6,10 +6,11 @@ import pytest
 from passlair.core.models.vault_entry import VaultEntry
 from passlair.core.readers.password_reader import PasswordReader
 
+service_name = "test_service"
 password = "retrievedPassword"
 dek = b"dek"
 data = {
-    "service_name": "test_service",
+    "service_name": service_name,
     # "user_id ": "string_id",
     "login": "my_login",
     "password": b"encrypted_pass",
@@ -43,10 +44,10 @@ class TestPositive:
                 PasswordReader, "_decrypt_password", return_value=password
             ) as decrypt,
         ):
-            test_data = reader.get_pass_for(data["service_name"])
+            test_data = reader.get_pass_for(service_name)
 
         assert test_data == password
-        retriever.assert_called_once_with(data["service_name"])
+        retriever.assert_called_once_with(service_name)
         decrypt.assert_called_once_with(password, mock_user_manager.get_session_key())
 
     def test_decrypt_password(self, mock_user_manager: MagicMock):
@@ -67,7 +68,7 @@ class TestPositive:
     def test_retrieve_password(self, mock_user_manager: MagicMock):
         reader = PasswordReader(mock_user_manager)
         with patch.object(PasswordReader, "_fetch_row", return_value=entry):
-            test_data = reader._retrieve_password(data["service_name"])
+            test_data = reader._retrieve_password(service_name)
 
         # TODO: maybe more asserts?
         assert isinstance(test_data, VaultEntry)
@@ -124,7 +125,7 @@ class TestNegative:
             patch.object(PasswordReader, "_retrieve_password", return_value=None),
             pytest.raises(KeyError),
         ):
-            _ = reader.get_pass_for(data["service_name"])
+            _ = reader.get_pass_for(service_name)
 
     def test_retrieve_password_returns_none_if_row_missing(
         self, mock_user_manager: MagicMock

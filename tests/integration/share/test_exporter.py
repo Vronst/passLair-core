@@ -11,7 +11,7 @@ from passlair.core.auth.user_manager import UserManager
 
 class TestPositive:
     def compare_output(
-        self, output: dict[str, str], passwords: list[dict[str, str]]
+        self, output: dict[str, dict[str, str]], passwords: list[dict[str, str]]
     ) -> None:
         for credentials in passwords:
             service = credentials["service"]

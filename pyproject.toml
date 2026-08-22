@@ -26,6 +26,7 @@ lint = [
 ]
 test = [
     "pytest>=9.0.3",
+    "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
 ]
 
@@ -39,6 +40,26 @@ executionEnvironments = [
     # not worth chasing there. src/ keeps the default (reportAny stays on).
     { root = "tests", reportAny = false, reportPrivateUsage = false, reportArgumentType = false, reportAttributeAccessIssue = false, reportUnknownMemberType = false, reportUnusedParameter = false },
 ]
+
+[tool.mypy]
+# Mirrors the basedpyright executionEnvironments override below: mock-heavy
+# test code trips type checks that aren't meaningful there (a MagicMock
+# stands in for anything, dict literals mixing str/bytes values get widened
+# to their nearest common supertype, patched attributes are typed as the
+# original callable/class rather than as a mock). src/ keeps full strictness.
+[[tool.mypy.overrides]]
+# There's no tests/__init__.py, so mypy doesn't resolve these under a
+# "tests." prefix -- it names them by their path relative to tests/ instead
+# (e.g. tests/unit/core/test_crypto.py -> module "unit.core.test_crypto").
+module = ["unit.*", "integration.*", "conftest"]
+disable_error_code = ["arg-type", "index", "attr-defined"]
+
+[[tool.mypy.overrides]]
+# pyperclip ships no type stubs; Super-Linter's mypy runs in its own
+# container rather than this project's venv, so a types-pyperclip dev
+# dependency wouldn't reliably reach it -- suppress at the config level.
+module = "pyperclip"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 # Surfaces our logger.debug/info/warning calls in the "Captured log call"
