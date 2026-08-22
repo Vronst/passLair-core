@@ -34,12 +34,24 @@ jobs:
     if: github.ref_type != 'tag'
     uses: Vronst/workflows/.github/workflows/lint.yml@main
     with:
+      # Super-Linter resolves *_CONFIG_FILE names under LINTER_RULES_PATH,
+      # which defaults to ".github/linters". Our pyproject.toml lives at
+      # the repo root, so without LINTER_RULES_PATH=. below it looks for
+      # .github/linters/pyproject.toml, doesn't find it, falls back to the
+      # container's own default template (which has no mypy config of that
+      # name either), and dies with:
+      #   PYTHON_MYPY_LINTER_RULES rules file
+      #   (/action/lib/.automation/pyproject.toml) doesn't exist.
+      # NOTE: this whole block is echoed verbatim into $GITHUB_ENV by the
+      # reusable workflow, so it must contain only KEY=VALUE lines --
+      # no "#" comments inside the `linter_env: |` string itself.
       linter_env: |
         VALIDATE_PYTHON_RUFF=true
         VALIDATE_PYTHON_MYPY=true
         PYTHON_MYPY_CONFIG_FILE=pyproject.toml
         VALIDATE_MARKDOWN=true
         VALIDATE_YAML_PRETTIER=true
+        LINTER_RULES_PATH=.
 
   # 3. Testing: Runs on normal branch pushes and PRs
   testing:
