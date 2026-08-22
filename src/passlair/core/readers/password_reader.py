@@ -37,7 +37,9 @@ class PasswordReader(BaseRepository):
         _ = self.user.get_session_key()
 
         with db.session() as session:
-            result = session.query(VaultEntry).filter_by(user_id=self.user.user_id).all()
+            result = (
+                session.query(VaultEntry).filter_by(user_id=self.user.user_id).all()
+            )
 
         logger.debug(
             "get_all_passwords: found %d entries for user_id=%r",

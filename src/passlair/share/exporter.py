@@ -23,37 +23,34 @@ class Exporter(BaseExporter):
         result: dict[str, dict[str, str]] = {}
         for entry in vault_entries:
             password = decrypt_password(
-                entry.password,
-                entry.nonce,
-                self.__manager.get_session_key()
+                entry.password, entry.nonce, self.__manager.get_session_key()
             ).decode("utf-8")
 
-            result[entry.service_name] = {
-                'login': entry.login,
-                'password': password
-            }
+            result[entry.service_name] = {"login": entry.login, "password": password}
 
         logger.debug("Retrieved %d vault entries for export", len(result))
         return result
 
     def export_to_txt(self, path: str) -> None:
-        with open(path, 'w') as file:
+        with open(path, "w") as file:
             _ = file.write(self._export_txt())
 
     def export_to_csv(self, path: str) -> None:
-        with open(path, 'w') as file:
+        with open(path, "w") as file:
             if not (passwords := self._retrieve_passwords()):
                 logger.info("No passwords found")
                 _ = file.write(",,,")
                 return
-            result = 'service,login,password\n'
+            result = "service,login,password\n"
             for service, credentials in passwords.items():
-                result += f'{service},{credentials["login"]},{credentials["password"]}\n'
+                result += (
+                    f"{service},{credentials['login']},{credentials['password']}\n"
+                )
 
             _ = file.write(result)
 
     def export_to_json(self, path: str) -> None:
-        with open(path, 'w') as file:
+        with open(path, "w") as file:
             if not (passwords := self._retrieve_passwords()):
                 logger.info("No passwords found")
                 _ = file.write("{}")
@@ -69,13 +66,13 @@ class Exporter(BaseExporter):
         Raises ValueError for an unrecognized fmt.
         """
         match fmt:
-            case 'json':
+            case "json":
                 self.export_to_json(path)
                 logger.info("Exporting to json.")
-            case 'csv':
+            case "csv":
                 self.export_to_csv(path)
                 logger.info("Exporting to csv.")
-            case 'txt':
+            case "txt":
                 self.export_to_txt(path)
                 logger.info("Exporting to txt.")
             case _:
@@ -93,9 +90,11 @@ class Exporter(BaseExporter):
     def _export_txt(self) -> str:
         if not (passwords := self._retrieve_passwords()):
             logger.info("No passwords found")
-        result = ''
+        result = ""
         for service, credentials in passwords.items():
-            result += f'{service=} / {credentials["login"]=} / {credentials["password"]=}\n'
+            result += (
+                f"{service=} / {credentials["login"]=} / {credentials["password"]=}\n"
+            )
 
         return result
 
@@ -104,10 +103,10 @@ class Exporter(BaseExporter):
         """Copies the export to the clipboard (via pyperclip) formatted as
         'txt' or 'json'."""
         match fmt:
-            case 'json':
+            case "json":
                 logger.info("Coping json passwords to clipboard.")
                 self.get_clipboard_json()
-            case 'txt':
+            case "txt":
                 logger.info("Coping passwords to clipboard")
                 self.get_clipboard_txt()
             case _:
