@@ -3,9 +3,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
+from passlair.core.crypto import encrypt
 from passlair.core.models.vault_entry import VaultEntry
 from passlair.core.writers.password_writer import PasswordWriter
 from passlair.dataclasses.password_data import PasswordCreation
+
+REAL_DEK = b"a_real_32_byte_session_key_here!"
 
 password = "password321"
 data = {
@@ -169,84 +172,122 @@ class TestPositive:
         }
         assert added_services == {"github.com", "gitlab.com"}
 
-    def test_save_passwords_skips_a_byte_for_byte_duplicate(
+    def test_save_passwords_skips_unchanged_entry_without_reencrypting(
         self, mock_user_manager: MagicMock
     ) -> None:
-        """compare_vault_entries does correctly skip when the incoming entry's
-        service/login/password bytes are identical to an existing row -- the
-        gap (see TestNegative) is only when the same plaintext gets
-        re-encrypted and the ciphertext no longer matches byte-for-byte."""
+        """A re-imported service whose login/password decrypt to the exact
+        values already stored should be left untouched -- and, since
+        deciding that requires nothing but the existing ciphertext, it
+        should never even reach _prepare_data (no pointless re-encryption)."""
+        mock_user_manager.get_session_key.return_value = REAL_DEK
+        ciphertext, nonce = encrypt(b"pw_a", REAL_DEK)
         existing_entry = VaultEntry(
             user_id="string_id",
             service_name="github.com",
             login="login_a",
-            password=b"cipher_a",
-            nonce=b"11",
+            password=ciphertext,
+            nonce=nonce,
         )
         mock_db, mock_session = patch_db_for_query(existing=[existing_entry])
         writer = PasswordWriter(mock_user_manager)
-        duplicate_data = PasswordCreation(
-            user_id="string_id",
-            service_name="github.com",
-            login="login_a",
-            password=b"cipher_a",
-            nonce=b"11",
-        )
 
         with (
-            patch.object(PasswordWriter, "_prepare_data", return_value=duplicate_data),
+            patch.object(PasswordWriter, "_prepare_data") as mock_prepare,
             patch("passlair.core.writers.password_writer.db", mock_db),
         ):
             writer.save_passwords([make_import_entry("github.com", "login_a", "pw_a")])
 
+        mock_prepare.assert_not_called()
         mock_session.add.assert_not_called()
+
+    def test_save_passwords_updates_entry_when_password_changed(
+        self, mock_user_manager: MagicMock
+    ) -> None:
+        """An existing service re-imported with a different plaintext
+        password must be updated in place (not skipped, not added again)."""
+        mock_user_manager.get_session_key.return_value = REAL_DEK
+        old_ciphertext, old_nonce = encrypt(b"old_pw", REAL_DEK)
+        existing_entry = VaultEntry(
+            user_id="string_id",
+            service_name="github.com",
+            login="login_a",
+            password=old_ciphertext,
+            nonce=old_nonce,
+        )
+        mock_db, mock_session = patch_db_for_query(existing=[existing_entry])
+        writer = PasswordWriter(mock_user_manager)
+
+        with patch("passlair.core.writers.password_writer.db", mock_db):
+            writer.save_passwords([make_import_entry("github.com", "login_a", "new_pw")])
+
+        mock_session.add.assert_not_called()
+        assert existing_entry.password != old_ciphertext
+        assert existing_entry.nonce != old_nonce
+
+    def test_save_passwords_updates_entry_when_login_changed(
+        self, mock_user_manager: MagicMock
+    ) -> None:
+        """Same plaintext password, but a different login, must also count
+        as changed -- login is part of what "unchanged" means."""
+        mock_user_manager.get_session_key.return_value = REAL_DEK
+        ciphertext, nonce = encrypt(b"pw_a", REAL_DEK)
+        existing_entry = VaultEntry(
+            user_id="string_id",
+            service_name="github.com",
+            login="old_login",
+            password=ciphertext,
+            nonce=nonce,
+        )
+        mock_db, mock_session = patch_db_for_query(existing=[existing_entry])
+        writer = PasswordWriter(mock_user_manager)
+
+        with patch("passlair.core.writers.password_writer.db", mock_db):
+            writer.save_passwords([make_import_entry("github.com", "new_login", "pw_a")])
+
+        mock_session.add.assert_not_called()
+        assert existing_entry.login == "new_login"
+
+    def test_is_unchanged_true_for_matching_login_and_password(
+        self, mock_user_manager: MagicMock
+    ) -> None:
+        writer = PasswordWriter(mock_user_manager)
+        ciphertext, nonce = encrypt(b"pw_a", REAL_DEK)
+        existing_entry = VaultEntry(
+            user_id="string_id",
+            service_name="github.com",
+            login="login_a",
+            password=ciphertext,
+            nonce=nonce,
+        )
+
+        assert writer._is_unchanged(existing_entry, "login_a", "pw_a", REAL_DEK) is True
+
+    def test_is_unchanged_false_when_login_differs_without_decrypting(
+        self, mock_user_manager: MagicMock
+    ) -> None:
+        """A login mismatch alone should be enough to report "changed" --
+        no need to spend a decrypt call on it."""
+        writer = PasswordWriter(mock_user_manager)
+        existing_entry = VaultEntry(
+            user_id="string_id",
+            service_name="github.com",
+            login="old_login",
+            password=b"irrelevant-ciphertext",
+            nonce=b"irrelevant12",
+        )
+
+        with patch(
+            "passlair.core.writers.password_writer.decrypt"
+        ) as mock_decrypt:
+            result = writer._is_unchanged(
+                existing_entry, "new_login", "pw_a", REAL_DEK
+            )
+
+        assert result is False
+        mock_decrypt.assert_not_called()
 
 
 class TestNegative:
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "compare_vault_entries compares raw ciphertext, but "
-            "core.crypto.encrypt uses a fresh nonce every call, so "
-            "re-encrypting the same plaintext password never reproduces the "
-            "same bytes. save_passwords therefore never recognizes a "
-            "re-imported password for an already-existing service as a "
-            "duplicate, and inserts a second row instead of skipping it. "
-            "Fix by deduping on service_name (scoped to this user) before "
-            "encrypting, not by comparing encrypted payloads."
-        ),
-    )
-    def test_save_passwords_skips_a_service_that_already_exists(
-        self, mock_user_manager: MagicMock
-    ) -> None:
-        existing_entry = VaultEntry(
-            user_id="string_id",
-            service_name="github.com",
-            login="login_a",
-            password=b"cipher_a_old",
-            nonce=b"11",
-        )
-        mock_db, mock_session = patch_db_for_query(existing=[existing_entry])
-        writer = PasswordWriter(mock_user_manager)
-        # Same service/login, but a different ciphertext -- exactly what a
-        # fresh call to _prepare_data produces for the *same* plaintext
-        # password, since encryption is never deterministic.
-        reencrypted_data = PasswordCreation(
-            user_id="string_id",
-            service_name="github.com",
-            login="login_a",
-            password=b"cipher_a_new",
-            nonce=b"22",
-        )
-
-        with (
-            patch.object(PasswordWriter, "_prepare_data", return_value=reencrypted_data),
-            patch("passlair.core.writers.password_writer.db", mock_db),
-        ):
-            writer.save_passwords([make_import_entry("github.com", "login_a", "pw_a")])
-
-        mock_session.add.assert_not_called()
-
     def test_init_fails_with_invalid_user_manager(self):
         """Ensure initialization raises a TypeError if user object doesn't meet requirements."""
         # Testing what happens if None or an invalid type is passed as the user session manager
