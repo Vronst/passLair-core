@@ -3,7 +3,8 @@ import json
 from typing import override
 import pyperclip
 
-from passlair.base.abstract.base_importer import BaseImporter
+from ..base.abstract.base_importer import BaseImporter
+from ..core.writers.password_writer import PasswordWriter
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,8 @@ class Importer(BaseImporter):
                 raise ValueError("Invalid format. Choose txt/json/csv")
 
     def _save_json(self, data: dict[str, dict[str, str]]) -> None:
-        pass
+        for service, credentials in data.items():
+            ...
 
     def import_from_json(self, path: str) -> None:
         pass

@@ -6,6 +6,7 @@ from ...dataclasses.password_data import PasswordCreation
 from ..crypto import encrypt
 from ..database.database_manager import db
 from ..models.vault_entry import VaultEntry
+from .helpers import check_if_entry_in_list
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,23 @@ class PasswordWriter(BaseRepository):
             "Password saved for service=%r, user_id=%r", service, self.user.user_id
         )
         return True
+
+    def save_passwords(self, passwords: list[dict[str, dict[str, str]]]) -> None:
+        with db.session() as session:
+            entries = session.query(VaultEntry).filter_by(
+                user_id=self.user.user_id
+            ).all()
+            for password in passwords:
+                service, credentials = next(iter(password.items()))
+                ready_data = self._prepare_data(
+                    service,
+                    credentials['login'],
+                    credentials['password']
+                )
+                entry = self._new_password(ready_data)
+                if not check_if_entry_in_list(entry, entries):
+                    session.add(entry)
+                    session.commit()
 
     def _prepare_data(
         self, service: str, login: str, password: str
