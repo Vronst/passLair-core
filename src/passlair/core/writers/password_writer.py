@@ -27,9 +27,11 @@ class PasswordWriter(BaseRepository):
         )
         return True
 
-    def save_passwords(self, passwords: list[dict[str, dict[str, str]]]) -> None:
+    def save_passwords(self, passwords: dict[str, dict[str, str]]) -> None:
         """Imports a batch of {service: {"login": ..., "password": ...}} entries
-        for the logged-in user in a single transaction.
+        for the logged-in user in a single transaction -- the same shape
+        Exporter._retrieve_passwords/export_to_json produce, so a round-trip
+        needs no reshaping.
 
         For each entry: a new service is inserted; an existing service whose
         login/password are unchanged is left untouched; an existing service
@@ -43,8 +45,7 @@ class PasswordWriter(BaseRepository):
                 .filter_by(user_id=self.user.user_id)
                 .all()
             }
-            for item in passwords:
-                service, credentials = next(iter(item.items()))
+            for service, credentials in passwords.items():
                 login = credentials["login"]
                 plain_password = credentials["password"]
                 entry = existing.get(service)

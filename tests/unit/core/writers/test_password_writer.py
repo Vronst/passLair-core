@@ -160,10 +160,10 @@ class TestPositive:
             patch("passlair.core.writers.password_writer.db", mock_db),
         ):
             writer.save_passwords(
-                [
-                    make_import_entry("github.com", "login_a", "pw_a"),
-                    make_import_entry("gitlab.com", "login_b", "pw_b"),
-                ]
+                {
+                    **make_import_entry("github.com", "login_a", "pw_a"),
+                    **make_import_entry("gitlab.com", "login_b", "pw_b"),
+                }
             )
 
         assert mock_session.add.call_count == 2
@@ -195,7 +195,7 @@ class TestPositive:
             patch.object(PasswordWriter, "_prepare_data") as mock_prepare,
             patch("passlair.core.writers.password_writer.db", mock_db),
         ):
-            writer.save_passwords([make_import_entry("github.com", "login_a", "pw_a")])
+            writer.save_passwords(make_import_entry("github.com", "login_a", "pw_a"))
 
         mock_prepare.assert_not_called()
         mock_session.add.assert_not_called()
@@ -218,7 +218,7 @@ class TestPositive:
         writer = PasswordWriter(mock_user_manager)
 
         with patch("passlair.core.writers.password_writer.db", mock_db):
-            writer.save_passwords([make_import_entry("github.com", "login_a", "new_pw")])
+            writer.save_passwords(make_import_entry("github.com", "login_a", "new_pw"))
 
         mock_session.add.assert_not_called()
         assert existing_entry.password != old_ciphertext
@@ -242,7 +242,7 @@ class TestPositive:
         writer = PasswordWriter(mock_user_manager)
 
         with patch("passlair.core.writers.password_writer.db", mock_db):
-            writer.save_passwords([make_import_entry("github.com", "new_login", "pw_a")])
+            writer.save_passwords(make_import_entry("github.com", "new_login", "pw_a"))
 
         mock_session.add.assert_not_called()
         assert existing_entry.login == "new_login"

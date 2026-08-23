@@ -27,10 +27,6 @@ class Importer(BaseImporter):
                 logger.error("Invalid clipboard format.")
                 raise ValueError("Invalid format. Choose txt/json/csv")
 
-    def _save_json(self, data: dict[str, dict[str, str]]) -> None:
-        for service, credentials in data.items():
-            ...
-
     def import_from_json(self, path: str) -> None:
         pass
 
