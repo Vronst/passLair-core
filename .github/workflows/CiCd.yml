@@ -11,6 +11,7 @@ on:
 
 permissions:
   pull-requests: write # For Job 1 (Labeler) & Job 4 (Auto-PR)
+  issues: write # For Job 1 (Labeler's gh label create -- reusable-workflow permissions are capped by this block)
   contents: write # For Job 6 (Releases)
   statuses: write # For commit status checks
   packages: read # For Job 2 (Linter package fetching)

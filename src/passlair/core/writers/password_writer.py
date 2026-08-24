@@ -3,7 +3,7 @@ import logging
 from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.base_repository import BaseRepository
 from ...dataclasses.password_data import PasswordCreation
-from ..crypto import encrypt
+from ..crypto import decrypt, encrypt
 from ..database.database_manager import db
 from ..models.vault_entry import VaultEntry
 
@@ -26,6 +26,65 @@ class PasswordWriter(BaseRepository):
             "Password saved for service=%r, user_id=%r", service, self.user.user_id
         )
         return True
+
+    def save_passwords(self, passwords: dict[str, dict[str, str]]) -> None:
+        """Imports a batch of {service: {"login": ..., "password": ...}} entries
+        for the logged-in user in a single transaction -- the same shape
+        Exporter._retrieve_passwords/export_to_json produce, so a round-trip
+        needs no reshaping.
+
+        For each entry: a new service is inserted; an existing service whose
+        login/password are unchanged is left untouched; an existing service
+        whose login or password differs is updated in place.
+        """
+        dek = self.user.get_session_key()
+        with db.session() as session:
+            existing = {
+                e.service_name: e
+                for e in session.query(VaultEntry)
+                .filter_by(user_id=self.user.user_id)
+                .all()
+            }
+            for service, credentials in passwords.items():
+                login = credentials["login"]
+                plain_password = credentials["password"]
+                entry = existing.get(service)
+
+                if entry is not None and self._is_unchanged(
+                    entry, login, plain_password, dek
+                ):
+                    logger.debug(
+                        "Skipping unchanged import entry for service=%r", service
+                    )
+                    continue
+
+                ready_data = self._prepare_data(service, login, plain_password)
+                if entry is None:
+                    session.add(self._new_password(ready_data))
+                else:
+                    _ = self._update_password(ready_data, entry)
+
+        logger.info(
+            "Finished importing %d password entries for user_id=%r",
+            len(passwords),
+            self.user.user_id,
+        )
+
+    def _is_unchanged(
+        self, entry: VaultEntry, login: str, password: str, dek: bytes
+    ) -> bool:
+        """True if `entry` already holds this exact login/password.
+
+        Requires decrypting `entry.password` -- ciphertext alone can never
+        answer this, since encryption uses a fresh nonce on every call (see
+        core.crypto.encrypt), so re-encrypting an identical plaintext never
+        reproduces the same bytes.
+        """
+        if entry.login != login:
+            return False
+
+        current_password = decrypt(entry.password, entry.nonce, dek).decode("utf-8")
+        return current_password == password
 
     def _prepare_data(
         self, service: str, login: str, password: str

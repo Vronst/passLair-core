@@ -39,7 +39,7 @@ class Exporter(BaseExporter):
         with open(path, "w") as file:
             if not (passwords := self._retrieve_passwords()):
                 logger.info("No passwords found")
-                _ = file.write(",,,")
+                _ = file.write(",,")
                 return
             result = "service,login,password\n"
             for service, credentials in passwords.items():
@@ -92,9 +92,7 @@ class Exporter(BaseExporter):
             logger.info("No passwords found")
         result = ""
         for service, credentials in passwords.items():
-            result += (
-                f"{service=} / {credentials["login"]=} / {credentials["password"]=}\n"
-            )
+            result += f"service={service} / login={credentials['login']} / password={credentials['password']}\n"
 
         return result
 
