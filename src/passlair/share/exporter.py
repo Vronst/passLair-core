@@ -92,9 +92,7 @@ class Exporter(BaseExporter):
             logger.info("No passwords found")
         result = ""
         for service, credentials in passwords.items():
-            result += (
-                f"service={service} / login={credentials["login"]} / password={credentials["password"]}\n"
-            )
+            result += f"service={service} / login={credentials['login']} / password={credentials['password']}\n"
 
         return result
 

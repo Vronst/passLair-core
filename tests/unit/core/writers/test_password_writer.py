@@ -247,6 +247,56 @@ class TestPositive:
         mock_session.add.assert_not_called()
         assert existing_entry.login == "new_login"
 
+    def test_save_passwords_handles_mixed_batch(
+        self, mock_user_manager: MagicMock
+    ) -> None:
+        """A single import batch with one new, one changed, and one
+        unchanged entry must handle each independently and correctly --
+        not just each case in isolation."""
+        mock_user_manager.get_session_key.return_value = REAL_DEK
+        unchanged_cipher, unchanged_nonce = encrypt(b"unchanged_pw", REAL_DEK)
+        changed_cipher, changed_nonce = encrypt(b"old_pw", REAL_DEK)
+        unchanged_entry = VaultEntry(
+            user_id="string_id",
+            service_name="unchanged.com",
+            login="login_u",
+            password=unchanged_cipher,
+            nonce=unchanged_nonce,
+        )
+        changed_entry = VaultEntry(
+            user_id="string_id",
+            service_name="changed.com",
+            login="login_c",
+            password=changed_cipher,
+            nonce=changed_nonce,
+        )
+        mock_db, mock_session = patch_db_for_query(
+            existing=[unchanged_entry, changed_entry]
+        )
+        writer = PasswordWriter(mock_user_manager)
+
+        with patch("passlair.core.writers.password_writer.db", mock_db):
+            writer.save_passwords(
+                {
+                    **make_import_entry("new.com", "login_n", "new_pw"),
+                    **make_import_entry("changed.com", "login_c", "new_pw"),
+                    **make_import_entry("unchanged.com", "login_u", "unchanged_pw"),
+                }
+            )
+
+        # new.com -> the only insert in this batch.
+        assert mock_session.add.call_count == 1
+        added = mock_session.add.call_args.args[0]
+        assert added.service_name == "new.com"
+
+        # changed.com -> updated in place, not (re-)added.
+        assert changed_entry.password != changed_cipher
+        assert changed_entry.nonce != changed_nonce
+
+        # unchanged.com -> left completely untouched.
+        assert unchanged_entry.password == unchanged_cipher
+        assert unchanged_entry.nonce == unchanged_nonce
+
     def test_is_unchanged_true_for_matching_login_and_password(
         self, mock_user_manager: MagicMock
     ) -> None:
@@ -276,12 +326,8 @@ class TestPositive:
             nonce=b"irrelevant12",
         )
 
-        with patch(
-            "passlair.core.writers.password_writer.decrypt"
-        ) as mock_decrypt:
-            result = writer._is_unchanged(
-                existing_entry, "new_login", "pw_a", REAL_DEK
-            )
+        with patch("passlair.core.writers.password_writer.decrypt") as mock_decrypt:
+            result = writer._is_unchanged(existing_entry, "new_login", "pw_a", REAL_DEK)
 
         assert result is False
         mock_decrypt.assert_not_called()
