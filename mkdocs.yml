@@ -1,0 +1,30 @@
+site_name: passLair
+site_description: Library to help you build your password manager
+repo_url: https://github.com/Vronst/passLair-core
+
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.top
+    - navigation.sections
+    - search.suggest
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          # docs.yml only installs mkdocs-material/mkdocstrings, not this
+          # project's own dependencies -- griffe (mkdocstrings' backend)
+          # statically parses source rather than importing it, so it just
+          # needs to find the package under src/, not have it installed.
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+
+nav:
+  - Home: index.md
+  - API Reference: api-reference.md

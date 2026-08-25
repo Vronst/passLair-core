@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.exc import IntegrityError
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
-from ...base.base_repository import BaseRepository
+from ...base.abstract.base_repository import BaseRepository
 from ...dataclasses.user_data import UserCreation
 from ..auth.credentials import (
     backup_kek_from_phrase,

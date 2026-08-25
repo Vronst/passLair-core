@@ -2,7 +2,7 @@ import logging
 
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
-from ...base.base_repository import BaseRepository
+from ...base.abstract.base_repository import BaseRepository
 from ..database.database_manager import db
 from ..crypto import decrypt
 from ..models.vault_entry import VaultEntry
