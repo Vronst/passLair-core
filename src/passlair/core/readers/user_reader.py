@@ -1,6 +1,6 @@
 import logging
 
-from ...base.base_repository import BaseRepository
+from ...base.abstract.base_repository import BaseRepository
 from ..models.standard_user import StandardUser
 
 logger = logging.getLogger(__name__)

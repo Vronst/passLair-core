@@ -2,7 +2,7 @@ import logging
 from abc import ABC
 from typing import TypeVar
 
-from ..core.database.database_manager import db
+from ...core.database.database_manager import db
 
 logger = logging.getLogger(__name__)
 
