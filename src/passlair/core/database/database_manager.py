@@ -4,11 +4,12 @@ from contextlib import contextmanager
 from pathlib import Path
 from collections.abc import Generator
 
-from sqlalchemy import MetaData, create_engine
+from pydantic import ValidationError
+from sqlalchemy import MetaData, create_engine, make_url, URL
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
-from ...base import SingletonMeta
 from ..models.base import Base
+from ...dataclasses.db_connection import DBConnection
 
 logger = logging.getLogger(__name__)
 
@@ -17,21 +18,63 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import scoped_session
 
 
-class DatabaseManager(metaclass=SingletonMeta):
+class DatabaseManager:
     def __init__(self) -> None:
         self._engine: None | Engine = None
         self._session_factory: None | scoped_session[Session] = None
 
     def _reinit_check(self, force: bool = False) -> bool:
-        if self._engine:
-            if not force:
-                return False
+        if not self._engine:
+            return True
 
-            if self._session_factory:
-                self._session_factory.remove()
+        if not force:
+            return False
 
-            self._engine.dispose()
+        self.dispose()
         return True
+
+    @staticmethod
+    def _mariadb_url(
+        *,
+        full_url: str | URL | None = None,
+        username: str | None = None,
+        password: str | None = None,
+        host: str | None = None,
+        port: int | None = None,
+        database: str | None = None,
+    ) -> URL:
+        """Builds and validates a MariaDB connection URL.
+
+        Accepts either a ready ``full_url`` or the discrete components, and
+        defers the "one form or the other must be complete" check to
+        DBConnection. Pydantic's ValidationError is translated into a plain
+        ValueError with a readable message.
+        """
+        if isinstance(full_url, URL):
+            return full_url
+
+        if full_url is not None:
+            return make_url(full_url)
+
+        try:
+            conn = DBConnection(
+                username=username,
+                password=password,
+                host=host,
+                port=port,
+                database=database,
+            )
+        except ValidationError as e:
+            raise ValueError(f"Invalid MariaDB connection config: {e}") from e
+
+        if conn.full_url is None:  # DBConnection's validator guarantees otherwise
+            raise RuntimeError("DBConnection produced no URL")
+
+        return make_url(conn.full_url)
+
+    def __create_sqlite_url(self, path: str | None = None) -> str:
+        filepath = path or str(Path(__file__).parents[4] / "passLair_db.db")
+        return f"sqlite:///{filepath}"
 
     def init_sqlite(self, filepath: str | None = None, *, force: bool = False) -> None:
         """Initializes a local SQLite database configuration."""
@@ -39,8 +82,7 @@ class DatabaseManager(metaclass=SingletonMeta):
             logger.debug("SQLite already initialized, skipping re-init (force=False).")
             return
 
-        filepath = filepath or str(Path(__file__).parents[4] / "passLair_db.db")
-        database_url = f"sqlite:///{filepath}"
+        database_url = self.__create_sqlite_url(filepath)
         logger.info("Initializing SQLite database at %s", filepath)
 
         self._engine = create_engine(
@@ -51,30 +93,45 @@ class DatabaseManager(metaclass=SingletonMeta):
 
     def init_mariadb(
         self,
-        username: str,
-        password_str: str,
-        host: str,
-        port: int,
-        database: str,
+        full_url: str | URL | None = None,
         *,
+        username: str | None = None,
+        password: str | None = None,
+        host: str | None = None,
+        port: int | None = None,
+        database: str | None = None,
         force: bool = False,
     ) -> None:
-        """Initializes a networked MariaDB database configuration using the pymysql driver."""
+        """Initializes a networked MariaDB connection using the pymysql driver.
+
+        Pass either ``full_url`` (a connection URL or SQLAlchemy ``URL``), or
+        all of ``username`` / ``password`` / ``host`` / ``port`` / ``database``.
+        A caller holding a config dict can spread it: ``init_mariadb(**cfg)``.
+
+        Raises:
+            ValueError: if neither form is fully supplied.
+        """
         # URL Format: mariadb+pymysql://user:pass@host:port/dbname
-        database_url = (
-            f"mariadb+pymysql://{username}:{password_str}@{host}:{port}/{database}"
-        )
         if not self._reinit_check(force):
             logger.debug("MariaDB already initialized, skipping re-init (force=False).")
             return
 
-        # Never log database_url directly -- it embeds password_str in cleartext.
+        database_url = self._mariadb_url(
+            full_url=full_url,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            database=database,
+        )
+        # Never log the URL directly -- it embeds the password. We read only
+        # the non-secret parts of the parsed URL here.
         logger.info(
             "Initializing MariaDB connection to %s:%s/%s as %s",
-            host,
-            port,
-            database,
-            username,
+            database_url.host,
+            database_url.port,
+            database_url.database,
+            database_url.username,
         )
 
         self._engine = create_engine(
@@ -129,7 +186,17 @@ class DatabaseManager(metaclass=SingletonMeta):
             db_session.close()
             self._session_factory.remove()
 
+    def dispose(self) -> None:
+        """Releases the engine's connection pool and the scoped session, and
+        resets the manager to its uninitialized state."""
+        if self._session_factory:
+            self._session_factory.remove()
 
-# --- Instantiation for Library Use ---
-# Create a single global instance that modules in your library can import
+        if self._engine:
+            self._engine.dispose()
+
+        self._engine = None
+        self._session_factory = None
+
+
 db = DatabaseManager()

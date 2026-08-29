@@ -4,17 +4,15 @@ from passlair.core.database.database_manager import db as original_db
 
 
 @pytest.fixture(autouse=True)
-def reset_database_singleton():
+def reset_database_state():
     """
-    Crucial fixture! Since DatabaseManager is a Singleton, this clears the
-    internal state before and after every single test to prevent leakages.
+    Crucial fixture! The module-global ``db`` instance is shared across every
+    test, so its engine/session state is cleared before and after each test to
+    prevent leakage between them.
     """
-    # Clear the global instance state
-    original_db._engine = None
-    original_db._session_factory = None
+    original_db.dispose()
     yield
-    original_db._engine = None
-    original_db._session_factory = None
+    original_db.dispose()
 
 
 @pytest.fixture()
