@@ -44,7 +44,7 @@ class TestGetPasswordForService:
         result = manager.get_password_for_service("github.com")
 
         assert not result.success
-        assert "not found" in result.messege
+        assert "not found" in result.message
 
     def test_no_active_session_reports_failure(self, mock_user_manager: MagicMock):
         manager = make_password_manager(mock_user_manager)
@@ -55,7 +55,7 @@ class TestGetPasswordForService:
         result = manager.get_password_for_service("github.com")
 
         assert not result.success
-        assert "log in" in result.messege
+        assert "log in" in result.message
 
     def test_unhandled_exception_propagates(self, mock_user_manager: MagicMock):
         """Regression guard: only KeyError/RuntimeError/PermissionError are meant to be caught."""
@@ -85,7 +85,7 @@ class TestSetPasswordForService:
         result = manager.set_password_for_service("github.com", "bob", "hunter2")
 
         assert not result.success
-        assert "Failed to save credentials" in result.messege
+        assert "Failed to save credentials" in result.message
 
     def test_validation_error_reports_failure(self, mock_user_manager: MagicMock):
         manager = make_password_manager(mock_user_manager)
@@ -96,7 +96,7 @@ class TestSetPasswordForService:
         result = manager.set_password_for_service("", "bob", "hunter2")
 
         assert not result.success
-        assert "must not be empty" in result.messege
+        assert "must not be empty" in result.message
 
     def test_type_error_reports_failure(self, mock_user_manager: MagicMock):
         manager = make_password_manager(mock_user_manager)
@@ -105,7 +105,7 @@ class TestSetPasswordForService:
         result = manager.set_password_for_service("github.com", "bob", "hunter2")
 
         assert not result.success
-        assert "bad argument type" in result.messege
+        assert "bad argument type" in result.message
 
     def test_no_active_session_reports_failure(self, mock_user_manager: MagicMock):
         manager = make_password_manager(mock_user_manager)
@@ -116,7 +116,7 @@ class TestSetPasswordForService:
         result = manager.set_password_for_service("github.com", "bob", "hunter2")
 
         assert not result.success
-        assert "log in" in result.messege
+        assert "log in" in result.message
 
     def test_unhandled_exception_propagates(self, mock_user_manager: MagicMock):
         """Regression guard: the except tuple shouldn't silently widen to catch everything."""
