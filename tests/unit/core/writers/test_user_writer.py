@@ -191,6 +191,57 @@ class TestNegative:
         with pytest.raises(ValueError, match="Email already exists"):
             UserWriter.save_user(mock_user_data)
 
+    def test_save_user_raises_on_duplicate_username_mysql_style(
+        self,
+        mock_db_session: tuple[MagicMock, MagicMock],
+        mock_user_data: UserCreation,
+    ):
+        """pymysql reports duplicates as (1062, "Duplicate entry ... for key
+        '...username'") -- the sqlite phrasing check must not be the only one."""
+        mock_session, _ = mock_db_session
+        mock_session.commit.side_effect = IntegrityError(
+            "INSERT",
+            {},
+            Exception(1062, "Duplicate entry 'bob' for key 'standard_users.username'"),
+        )
+
+        with pytest.raises(ValueError, match="Username already exists"):
+            UserWriter.save_user(mock_user_data)
+
+    def test_save_user_uniqueness_violation_with_undetermined_column(
+        self,
+        mock_db_session: tuple[MagicMock, MagicMock],
+        mock_user_data: UserCreation,
+    ):
+        """A genuine duplicate whose column can't be read off the message
+        (e.g. MySQL 'for key PRIMARY') still reports a duplicate, generically."""
+        mock_session, _ = mock_db_session
+        mock_session.commit.side_effect = IntegrityError(
+            "INSERT", {}, Exception(1062, "Duplicate entry '...' for key 'PRIMARY'")
+        )
+
+        with pytest.raises(ValueError, match="already exists"):
+            UserWriter.save_user(mock_user_data)
+
+    def test_save_user_does_not_mislabel_non_uniqueness_integrity_error(
+        self,
+        mock_db_session: tuple[MagicMock, MagicMock],
+        mock_user_data: UserCreation,
+    ):
+        """A NOT NULL / FK violation is a bug, not a duplicate account -- it
+        must not surface as 'already exists'."""
+        mock_session, _ = mock_db_session
+        mock_session.commit.side_effect = IntegrityError(
+            "INSERT",
+            {},
+            Exception("NOT NULL constraint failed: standard_users.email"),
+        )
+
+        with pytest.raises(ValueError, match="database constraint") as excinfo:
+            UserWriter.save_user(mock_user_data)
+
+        assert "already exists" not in str(excinfo.value)
+
     def test_change_password_user_not_found(self, mock_user_manager: MagicMock):
         writer = UserWriter(user=mock_user_manager)
 

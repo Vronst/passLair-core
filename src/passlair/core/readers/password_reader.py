@@ -1,6 +1,8 @@
 import logging
 
 
+from sqlalchemy import select
+
 from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.abstract.base_repository import BaseRepository
 from ..database.database_manager import db
@@ -43,6 +45,50 @@ class PasswordReader(BaseRepository):
 
         logger.debug(
             "get_all_passwords: found %d entries for user_id=%r",
+            len(result),
+            self.user.user_id,
+        )
+        return result
+
+    def get_all_services(self) -> list[str]:
+        """Returns the service name of every vault entry for the logged-in
+        user, without decrypting anything.
+
+        Raises PermissionError if there's no active session -- same rationale
+        as get_all_passwords: it keeps an empty vault distinguishable from
+        "not logged in".
+        """
+        _ = self.user.get_session_key()
+
+        with db.session() as session:
+            services = list(
+                session.scalars(
+                    select(VaultEntry.service_name).filter_by(user_id=self.user.user_id)
+                ).all()
+            )
+
+        logger.debug(
+            "get_all_services: %d services for user_id=%r",
+            len(services),
+            self.user.user_id,
+        )
+        return services
+
+    def get_all_decrypted(self) -> dict[str, dict[str, str]]:
+        """Returns ``{service: {"login": ..., "password": ...}}`` for every
+        vault entry of the logged-in user, decrypted -- the same shape
+        Exporter produces.
+
+        Raises PermissionError if there's no active session.
+        """
+        dek = self.user.get_session_key()
+
+        with db.session() as session:
+            rows = session.query(VaultEntry).filter_by(user_id=self.user.user_id).all()
+
+        result = {row.service_name: self._decrypt_password(row, dek) for row in rows}
+        logger.debug(
+            "get_all_decrypted: %d entries for user_id=%r",
             len(result),
             self.user.user_id,
         )

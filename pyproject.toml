@@ -1,6 +1,6 @@
 [project]
 name = "passlair"
-version = "0.1.0"
+version = "0.1.1"
 description = "Library to help you build your password manager"
 readme = "README.md"
 authors = [

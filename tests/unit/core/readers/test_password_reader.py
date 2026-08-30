@@ -94,6 +94,44 @@ class TestPositive:
             user_id=mock_user_manager.user_id
         )
 
+    def test_get_all_services(
+        self,
+        mock_user_manager: MagicMock,
+        mock_password_reader_db: tuple[MagicMock, MagicMock],
+    ):
+        reader = PasswordReader(mock_user_manager)
+        _, mock_session = mock_password_reader_db
+        mock_session.scalars.return_value.all.return_value = [
+            "github.com",
+            "gitlab.com",
+        ]
+
+        test_data = reader.get_all_services()
+
+        assert test_data == ["github.com", "gitlab.com"]
+        mock_user_manager.get_session_key.assert_called_once()
+
+    def test_get_all_decrypted(
+        self,
+        mock_user_manager: MagicMock,
+        mock_password_reader_db: tuple[MagicMock, MagicMock],
+    ):
+        reader = PasswordReader(mock_user_manager)
+        _, mock_session = mock_password_reader_db
+        mock_session.query.return_value.filter_by.return_value.all.return_value = [
+            entry
+        ]
+
+        with patch.object(
+            PasswordReader,
+            "_decrypt_password",
+            return_value={"login": "my_login", "password": password},
+        ) as mock_decrypt:
+            test_data = reader.get_all_decrypted()
+
+        assert test_data == {service_name: {"login": "my_login", "password": password}}
+        mock_decrypt.assert_called_once_with(entry, mock_user_manager.get_session_key())
+
     def test_get_all_passwords_empty_vault_returns_empty_list(
         self,
         mock_user_manager: MagicMock,
@@ -156,5 +194,37 @@ class TestNegative:
 
         with pytest.raises(PermissionError):
             _ = reader.get_all_passwords()
+
+        mock_db.session.assert_not_called()
+
+    def test_get_all_services_without_active_session_raises_permission_error(
+        self,
+        mock_user_manager: MagicMock,
+        mock_password_reader_db: tuple[MagicMock, MagicMock],
+    ):
+        reader = PasswordReader(mock_user_manager)
+        mock_db, _ = mock_password_reader_db
+        mock_user_manager.get_session_key.side_effect = PermissionError(
+            "No active secure session. Please log in."
+        )
+
+        with pytest.raises(PermissionError):
+            _ = reader.get_all_services()
+
+        mock_db.session.assert_not_called()
+
+    def test_get_all_decrypted_without_active_session_raises_permission_error(
+        self,
+        mock_user_manager: MagicMock,
+        mock_password_reader_db: tuple[MagicMock, MagicMock],
+    ):
+        reader = PasswordReader(mock_user_manager)
+        mock_db, _ = mock_password_reader_db
+        mock_user_manager.get_session_key.side_effect = PermissionError(
+            "No active secure session. Please log in."
+        )
+
+        with pytest.raises(PermissionError):
+            _ = reader.get_all_decrypted()
 
         mock_db.session.assert_not_called()

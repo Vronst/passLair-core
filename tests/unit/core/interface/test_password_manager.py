@@ -66,6 +66,54 @@ class TestGetPasswordForService:
             _ = manager.get_password_for_service("github.com")
 
 
+class TestListServices:
+    def test_success(self, mock_user_manager: MagicMock):
+        manager = make_password_manager(mock_user_manager)
+        manager.pass_reader.get_all_services.return_value = ["github.com", "gitlab.com"]
+
+        result = manager.list_services()
+
+        assert result.success
+        assert result.data == {"services": ["github.com", "gitlab.com"]}
+
+    def test_no_active_session_reports_failure(self, mock_user_manager: MagicMock):
+        manager = make_password_manager(mock_user_manager)
+        manager.pass_reader.get_all_services.side_effect = PermissionError(
+            "No active secure session. Please log in."
+        )
+
+        result = manager.list_services()
+
+        assert not result.success
+        assert "log in" in result.message
+
+
+class TestListEntries:
+    def test_success(self, mock_user_manager: MagicMock):
+        manager = make_password_manager(mock_user_manager)
+        manager.pass_reader.get_all_decrypted.return_value = {
+            "github.com": {"login": "bob", "password": "hunter2"},
+        }
+
+        result = manager.list_entries()
+
+        assert result.success
+        assert result.data == {
+            "entries": {"github.com": {"login": "bob", "password": "hunter2"}}
+        }
+
+    def test_no_active_session_reports_failure(self, mock_user_manager: MagicMock):
+        manager = make_password_manager(mock_user_manager)
+        manager.pass_reader.get_all_decrypted.side_effect = PermissionError(
+            "No active secure session. Please log in."
+        )
+
+        result = manager.list_entries()
+
+        assert not result.success
+        assert "log in" in result.message
+
+
 class TestSetPasswordForService:
     def test_success(self, mock_user_manager: MagicMock):
         manager = make_password_manager(mock_user_manager)

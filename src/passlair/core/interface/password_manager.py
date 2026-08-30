@@ -15,9 +15,31 @@ class PasswordManager(BaseFacade):
     def get_password_for_service(self, service: str) -> FacadeResult:
         try:
             result = self.pass_reader.get_pass_for(service)
-            return self._success("Password retrieved successfuly", result)
+            return self._success("Password retrieved successfully", result)
 
         except (KeyError, RuntimeError, PermissionError) as e:
+            return self._failure(str(e))
+
+    def list_services(self) -> FacadeResult:
+        """Service names of every stored credential for the logged-in user.
+        Nothing is decrypted."""
+        try:
+            services = self.pass_reader.get_all_services()
+            return self._success(
+                "Services retrieved successfully", {"services": services}
+            )
+
+        except (RuntimeError, PermissionError) as e:
+            return self._failure(str(e))
+
+    def list_entries(self) -> FacadeResult:
+        """Every stored credential for the logged-in user, decrypted, as
+        ``{service: {"login": ..., "password": ...}}``."""
+        try:
+            entries = self.pass_reader.get_all_decrypted()
+            return self._success("Entries retrieved successfully", {"entries": entries})
+
+        except (RuntimeError, PermissionError) as e:
             return self._failure(str(e))
 
     def set_password_for_service(
