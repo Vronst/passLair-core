@@ -15,42 +15,10 @@ from ..auth.credentials import (
     wrap_dek,
 )
 from ..database.database_manager import db
+from ..database.integrity import is_unique_violation, violation_names
 from ..models.standard_user import StandardUser
 
 logger = logging.getLogger(__name__)
-
-
-def _unique_violation_field(exc: IntegrityError) -> str | None:
-    """Classifies an IntegrityError raised while inserting a StandardUser.
-
-    Returns ``"username"`` / ``"email"`` for a uniqueness violation on that
-    column, ``"unknown"`` for a uniqueness violation whose column can't be
-    told apart, or ``None`` when the error is something else entirely (NOT
-    NULL, foreign key, ...) and must not be reported as a duplicate.
-
-    Substring matching rather than a portable error code because SQLAlchemy
-    exposes neither -- but the shape differs only between the two supported
-    drivers:
-      * sqlite3 -> "UNIQUE constraint failed: standard_users.username"
-      * pymysql -> (1062, "Duplicate entry '...' for key '...username'")
-    """
-    orig = exc.orig
-    text = str(orig).lower()
-    orig_args = getattr(orig, "args", ()) or ()
-
-    is_unique = (
-        "unique constraint failed" in text
-        or "duplicate entry" in text
-        or (len(orig_args) > 0 and orig_args[0] == 1062)  # MySQL ER_DUP_ENTRY
-    )
-    if not is_unique:
-        return None
-
-    if "username" in text:
-        return "username"
-    if "email" in text:
-        return "email"
-    return "unknown"
 
 
 class UserWriter(BaseRepository):
@@ -180,24 +148,25 @@ class UserWriter(BaseRepository):
                 session.add(entry)
                 session.commit()
         except IntegrityError as e:
-            field = _unique_violation_field(e)
-
-            if field == "username":
-                logger.warning(
-                    "save_user rejected: username=%r already exists", data.username
-                )
-                raise ValueError("Username already exists") from e
-            if field == "email":
-                logger.warning(
-                    "save_user rejected: email already in use for username=%r",
-                    data.username,
-                )
-                raise ValueError("Email already exists") from e
-            if field == "unknown":
-                logger.warning(
-                    "save_user rejected: uniqueness violation on an undetermined column"
-                )
-                raise ValueError("Username or email already exists") from e
+            if is_unique_violation(e):
+                match violation_names(e, "username", "email"):
+                    case "username":
+                        logger.warning(
+                            "save_user rejected: username=%r already exists",
+                            data.username,
+                        )
+                        raise ValueError("Username already exists") from e
+                    case "email":
+                        logger.warning(
+                            "save_user rejected: email already in use for username=%r",
+                            data.username,
+                        )
+                        raise ValueError("Email already exists") from e
+                    case _:
+                        logger.warning(
+                            "save_user rejected: uniqueness violation on an undetermined column"
+                        )
+                        raise ValueError("Username or email already exists") from e
 
             # Not a uniqueness violation -- don't mislabel it as a duplicate.
             logger.exception("save_user failed with an unexpected integrity error.")
