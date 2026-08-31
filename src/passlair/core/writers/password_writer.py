@@ -43,6 +43,7 @@ class PasswordWriter(BaseRepository):
                 e.service_name: e
                 for e in session.query(VaultEntry)
                 .filter_by(user_id=self.user.user_id)
+                .filter(VaultEntry.deleted_at.is_(None))
                 .all()
             }
             for service, credentials in passwords.items():

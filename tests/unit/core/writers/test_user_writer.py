@@ -1,3 +1,4 @@
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -283,3 +284,49 @@ class TestNegative:
         """Regression guard: UserWriter must depend on AuthenticatedUser, not a concrete class."""
         with pytest.raises(TypeError):
             _ = UserWriter(user=None)
+
+
+class TestDeleteUser:
+    def test_soft_deletes_user_and_vault_entries(
+        self,
+        mock_user: MagicMock,
+        mock_user_manager: MagicMock,
+        mock_db_session: tuple[MagicMock, MagicMock],
+    ):
+        mock_session, _ = mock_db_session
+        mock_user.deleted_at = None
+        mock_session.get.return_value = mock_user
+        update_call = mock_session.query.return_value.filter_by.return_value.filter.return_value.update
+        update_call.return_value = 3
+
+        UserWriter(user=mock_user_manager).delete_user()
+
+        # user is tombstoned, not removed from the session
+        assert isinstance(mock_user.deleted_at, datetime)
+        mock_session.delete.assert_not_called()
+        # and so are the vault entries, in one bulk UPDATE
+        update_call.assert_called_once()
+
+    def test_missing_user_raises(
+        self,
+        mock_user_manager: MagicMock,
+        mock_db_session: tuple[MagicMock, MagicMock],
+    ):
+        mock_session, _ = mock_db_session
+        mock_session.get.return_value = None
+
+        with pytest.raises(ValueError, match="User doesn't exists"):
+            UserWriter(user=mock_user_manager).delete_user()
+
+    def test_already_deleted_user_raises(
+        self,
+        mock_user: MagicMock,
+        mock_user_manager: MagicMock,
+        mock_db_session: tuple[MagicMock, MagicMock],
+    ):
+        mock_session, _ = mock_db_session
+        mock_user.deleted_at = datetime.now()
+        mock_session.get.return_value = mock_user
+
+        with pytest.raises(ValueError, match="User doesn't exists"):
+            UserWriter(user=mock_user_manager).delete_user()

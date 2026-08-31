@@ -81,9 +81,8 @@ class TestPositive:
         reader = PasswordReader(mock_user_manager)
         entries = [entry, VaultEntry(**data)]
         _, mock_session = mock_password_reader_db
-        mock_session.query.return_value.filter_by.return_value.all.return_value = (
-            entries
-        )
+        query_chain = mock_session.query.return_value.filter_by.return_value.filter
+        query_chain.return_value.all.return_value = entries
 
         test_data = reader.get_all_passwords()
 
@@ -118,9 +117,8 @@ class TestPositive:
     ):
         reader = PasswordReader(mock_user_manager)
         _, mock_session = mock_password_reader_db
-        mock_session.query.return_value.filter_by.return_value.all.return_value = [
-            entry
-        ]
+        query_chain = mock_session.query.return_value.filter_by.return_value.filter
+        query_chain.return_value.all.return_value = [entry]
 
         with patch.object(
             PasswordReader,
@@ -141,7 +139,8 @@ class TestPositive:
         not a failure -- it must not raise."""
         reader = PasswordReader(mock_user_manager)
         _, mock_session = mock_password_reader_db
-        mock_session.query.return_value.filter_by.return_value.all.return_value = []
+        query_chain = mock_session.query.return_value.filter_by.return_value.filter
+        query_chain.return_value.all.return_value = []
 
         test_data = reader.get_all_passwords()
 

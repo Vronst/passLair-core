@@ -31,9 +31,11 @@ def make_import_entry(
 def patch_db_for_query(existing: list[VaultEntry]) -> tuple[MagicMock, MagicMock]:
     """Returns (db_patcher_target_value, mock_session) for save_passwords tests:
     a mock `db` whose `session()` context manager yields a session whose
-    `query(...).filter_by(...).all()` returns `existing`."""
+    `query(...).filter_by(...).filter(...).all()` returns `existing`."""
     mock_session = MagicMock()
-    mock_session.query.return_value.filter_by.return_value.all.return_value = existing
+    mock_session.query.return_value.filter_by.return_value.filter.return_value.all.return_value = (  # noqa: E501
+        existing
+    )
     mock_db = MagicMock()
     mock_db.session.return_value.__enter__.return_value = mock_session
     mock_db.session.return_value.__exit__.return_value = False

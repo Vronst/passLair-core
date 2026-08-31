@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
 
@@ -17,6 +18,7 @@ from ..auth.credentials import (
 from ..database.database_manager import db
 from ..database.integrity import is_unique_violation, violation_names
 from ..models.standard_user import StandardUser
+from ..models.vault_entry import VaultEntry
 
 logger = logging.getLogger(__name__)
 
@@ -175,3 +177,28 @@ class UserWriter(BaseRepository):
             ) from e
 
         logger.info("User %r saved.", data.username)
+
+    def delete_user(self) -> None:
+        """Soft-deletes the user and every vault entry they own by stamping
+        ``deleted_at`` -- a hard DELETE can't be replicated to the sync peer,
+        a tombstone can."""
+        now = datetime.now()
+        with db.session() as session:
+            user = session.get(StandardUser, self.user.user_id)
+            if user is None or user.deleted_at is not None:
+                logger.warning("delete_user: no live user for id=%r", self.user.user_id)
+                raise ValueError("User doesn't exists!")
+
+            entries = (
+                session.query(VaultEntry)
+                .filter_by(user_id=self.user.user_id)
+                .filter(VaultEntry.deleted_at.is_(None))
+                .update({VaultEntry.deleted_at: now}, synchronize_session=False)
+            )
+            user.deleted_at = now
+
+        logger.info(
+            "Soft-deleted user_id=%r and %d vault entries",
+            self.user.user_id,
+            entries,
+        )

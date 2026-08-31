@@ -40,7 +40,10 @@ class PasswordReader(BaseRepository):
 
         with db.session() as session:
             result = (
-                session.query(VaultEntry).filter_by(user_id=self.user.user_id).all()
+                session.query(VaultEntry)
+                .filter_by(user_id=self.user.user_id)
+                .filter(VaultEntry.deleted_at.is_(None))
+                .all()
             )
 
         logger.debug(
@@ -63,7 +66,9 @@ class PasswordReader(BaseRepository):
         with db.session() as session:
             services = list(
                 session.scalars(
-                    select(VaultEntry.service_name).filter_by(user_id=self.user.user_id)
+                    select(VaultEntry.service_name)
+                    .filter_by(user_id=self.user.user_id)
+                    .where(VaultEntry.deleted_at.is_(None))
                 ).all()
             )
 
@@ -84,7 +89,12 @@ class PasswordReader(BaseRepository):
         dek = self.user.get_session_key()
 
         with db.session() as session:
-            rows = session.query(VaultEntry).filter_by(user_id=self.user.user_id).all()
+            rows = (
+                session.query(VaultEntry)
+                .filter_by(user_id=self.user.user_id)
+                .filter(VaultEntry.deleted_at.is_(None))
+                .all()
+            )
 
         result = {row.service_name: self._decrypt_password(row, dek) for row in rows}
         logger.debug(
