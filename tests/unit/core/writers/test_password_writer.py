@@ -1,3 +1,4 @@
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -35,6 +36,19 @@ def patch_db_for_query(existing: list[VaultEntry]) -> tuple[MagicMock, MagicMock
     mock_session = MagicMock()
     mock_session.query.return_value.filter_by.return_value.filter.return_value.all.return_value = (  # noqa: E501
         existing
+    )
+    mock_db = MagicMock()
+    mock_db.session.return_value.__enter__.return_value = mock_session
+    mock_db.session.return_value.__exit__.return_value = False
+    return mock_db, mock_session
+
+
+def patch_db_for_first(found: VaultEntry | None) -> tuple[MagicMock, MagicMock]:
+    """Like patch_db_for_query, but the `query(...).filter_by(...).filter(...)
+    .first()` chain returns `found` -- used by delete_password."""
+    mock_session = MagicMock()
+    mock_session.query.return_value.filter_by.return_value.filter.return_value.first.return_value = (  # noqa: E501
+        found
     )
     mock_db = MagicMock()
     mock_db.session.return_value.__enter__.return_value = mock_session
@@ -384,3 +398,44 @@ class TestNegative:
                     login=password_data.login,
                     password=password,
                 )
+
+
+class TestDeletePassword:
+    def test_soft_deletes_live_entry(self, mock_user_manager: MagicMock):
+        target = VaultEntry(**data)
+        assert target.deleted_at is None
+        mock_db, _ = patch_db_for_first(target)
+        writer = PasswordWriter(mock_user_manager)
+
+        with patch("passlair.core.writers.password_writer.db", mock_db):
+            writer.delete_password(data["service_name"])
+
+        assert isinstance(target.deleted_at, datetime)
+        mock_user_manager.get_session_key.assert_called_once()
+
+    def test_unknown_service_raises_without_touching_a_row(
+        self, mock_user_manager: MagicMock
+    ):
+        mock_db, mock_session = patch_db_for_first(None)
+        writer = PasswordWriter(mock_user_manager)
+
+        with patch("passlair.core.writers.password_writer.db", mock_db):
+            with pytest.raises(ValueError, match="not found"):
+                writer.delete_password("nope.com")
+
+        mock_session.delete.assert_not_called()
+
+    def test_not_logged_in_raises_before_opening_a_session(
+        self, mock_user_manager: MagicMock
+    ):
+        mock_db, _ = patch_db_for_first(None)
+        mock_user_manager.get_session_key.side_effect = PermissionError(
+            "No active secure session. Please log in."
+        )
+        writer = PasswordWriter(mock_user_manager)
+
+        with patch("passlair.core.writers.password_writer.db", mock_db):
+            with pytest.raises(PermissionError):
+                writer.delete_password("github.com")
+
+        mock_db.session.assert_not_called()
