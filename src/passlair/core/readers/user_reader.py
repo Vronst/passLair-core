@@ -9,10 +9,10 @@ logger = logging.getLogger(__name__)
 class UserReader(BaseRepository):
     @classmethod
     def get_user_by_name(cls, username: str) -> None | StandardUser:
-        logger.debug("Looking up user by username=%r", username)
+        logger.debug("get_user_by_name: username=%r", username)
         return cls._fetch_row(StandardUser, filters={"username": username})
 
     @classmethod
     def get_user_by(cls, **kwargs: object) -> None | StandardUser:
-        logger.debug("Looking up user by %s", list(kwargs))
+        logger.debug("get_user_by: filters=%s", list(kwargs))
         return cls._fetch_row(StandardUser, filters={**kwargs})

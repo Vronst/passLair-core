@@ -38,14 +38,14 @@ class Identity(BaseFacade):
 
             return self._failure("Username or password incorrect.")
         except RuntimeError as e:
-            logger.warning("Identity.login rejected: %s", e)
+            logger.warning("login: rejected: %s", e)
             return self._failure(str(e))
 
     def logout(self) -> FacadeResult:
         try:
             self.manager.logout()
         except RuntimeError as e:
-            logger.warning("Identity.logout rejected: %s", e)
+            logger.warning("logout: rejected: %s", e)
             return self._failure(str(e))
 
         return self._success("Loged out.")
@@ -54,18 +54,16 @@ class Identity(BaseFacade):
         self, new_password: str, old_password: str
     ) -> FacadeResult:
         if not old_password:
-            logger.warning(
-                "change_user_password: old_password must be a non-empty string"
-            )
+            logger.warning("change_user_password: rejected, old_password is empty")
             return self._failure("Old password must be a non-empty string.")
         if not self.manager.login_status:
-            logger.warning("change_user_password attempted without an active session.")
+            logger.warning("change_user_password: rejected, no active session")
             return self._failure("User not logged in.")
 
         assert self.manager.user_id
         if not compare_passwords(self.manager.user_id, old_password):
             logger.warning(
-                "change_user_password rejected: wrong old password for user_id=%r",
+                "change_user_password: rejected, wrong old password for user_id=%r",
                 self.manager.user_id,
             )
             return self._failure("Old password incorrect.")
@@ -74,13 +72,16 @@ class Identity(BaseFacade):
             self.user_writer.change_password(new_password, old_password)
         except ValueError as e:
             logger.warning(
-                "change_user_password failed for user_id=%r: %s",
+                "change_user_password: failed for user_id=%r: %s",
                 self.manager.user_id,
                 e,
             )
             return self._failure(str(e))
 
-        logger.info("Password changed for user_id=%r", self.manager.user_id)
+        logger.info(
+            "change_user_password: password changed for user_id=%r",
+            self.manager.user_id,
+        )
         return self._success("Password was changed")
 
     def reset_user_password(
@@ -92,11 +93,13 @@ class Identity(BaseFacade):
             )
         except ValueError as e:
             logger.warning(
-                "reset_user_password failed for username=%r: %s", username, e
+                "reset_user_password: failed for username=%r: %s", username, e
             )
             return self._failure(str(e))
 
-        logger.info("Password reset via backup phrase for username=%r", username)
+        logger.info(
+            "reset_user_password: reset via backup phrase for username=%r", username
+        )
         return self._success("Password was reset.", {"backup_phrase": new_phrase})
 
     def register_user(self, login: str, email: str, password: str) -> FacadeResult:
@@ -116,11 +119,14 @@ class Identity(BaseFacade):
             self.user_writer.save_user(user)
             logged = self.manager.login(login, password)
             if not logged:
-                logger.warning("Login failed after registration.")
-            logger.info("User %r registered.", login)
+                logger.warning(
+                    "register_user: auto-login failed after registration, username=%r",
+                    login,
+                )
+            logger.info("register_user: registered username=%r", login)
             return self._success(
                 "User registered successfully.", {"backup_phrase": backup_phrase}
             )
         except (ValueError, RuntimeError) as e:
-            logger.warning("Registration failed for username=%r: %s", login, e)
+            logger.warning("register_user: failed for username=%r: %s", login, e)
             return self._failure(str(e))

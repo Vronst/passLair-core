@@ -19,10 +19,18 @@ class PasswordReader(BaseRepository):
     def get_pass_for(self, service: str) -> dict[str, str]:
         encrypted_password = self._retrieve_password(service)
         if encrypted_password is None:
-            logger.warning("get_pass_for: no vault entry for service=%r", service)
+            logger.warning(
+                "get_pass_for: no vault entry for service=%r (user_id=%r)",
+                service,
+                self.user.user_id,
+            )
             raise KeyError("Password for this service not found")
 
-        logger.debug("Decrypting vault entry for service=%r", service)
+        logger.debug(
+            "get_pass_for: decrypting entry for service=%r (user_id=%r)",
+            service,
+            self.user.user_id,
+        )
         return self._decrypt_password(encrypted_password, self.user.get_session_key())
 
     def get_all_passwords(self) -> list[VaultEntry]:

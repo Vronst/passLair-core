@@ -79,11 +79,13 @@ class DatabaseManager:
     def init_sqlite(self, filepath: str | None = None, *, force: bool = False) -> None:
         """Initializes a local SQLite database configuration."""
         if not self._reinit_check(force):
-            logger.debug("SQLite already initialized, skipping re-init (force=False).")
+            logger.debug(
+                "init_sqlite: already initialized, skipping re-init (force=False)"
+            )
             return
 
         database_url = self.__create_sqlite_url(filepath)
-        logger.info("Initializing SQLite database at %s", filepath)
+        logger.info("init_sqlite: initializing database at %s", filepath)
 
         self._engine = create_engine(
             database_url, connect_args={"check_same_thread": False}
@@ -113,7 +115,9 @@ class DatabaseManager:
         """
         # URL Format: mariadb+pymysql://user:pass@host:port/dbname
         if not self._reinit_check(force):
-            logger.debug("MariaDB already initialized, skipping re-init (force=False).")
+            logger.debug(
+                "init_mariadb: already initialized, skipping re-init (force=False)"
+            )
             return
 
         database_url = self._mariadb_url(
@@ -127,7 +131,7 @@ class DatabaseManager:
         # Never log the URL directly -- it embeds the password. We read only
         # the non-secret parts of the parsed URL here.
         logger.info(
-            "Initializing MariaDB connection to %s:%s/%s as %s",
+            "init_mariadb: connecting to %s:%s/%s as %s",
             database_url.host,
             database_url.port,
             database_url.database,
@@ -179,7 +183,7 @@ class DatabaseManager:
             yield db_session
             db_session.commit()
         except Exception:
-            logger.exception("Session raised, rolling back transaction.")
+            logger.exception("session: transaction raised, rolling back")
             db_session.rollback()
             raise
         finally:

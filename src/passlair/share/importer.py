@@ -30,18 +30,16 @@ class Importer(BaseImporter):
 
     @override
     def import_from_file(self, path: str, fmt: str) -> None:
+        logger.info("import_from_file: importing %r as %s", path, fmt)
         match fmt:
             case "txt":
-                logger.info("Importing from txt file.")
                 self.import_from_txt(path)
             case "json":
-                logger.info("Importing from json file.")
                 self.import_from_json(path)
             case "csv":
-                logger.info("Importing from csv file.")
                 self.import_from_csv(path)
             case _:
-                logger.error("Invalid file format.")
+                logger.error("import_from_file: invalid format %r", fmt)
                 raise ValueError("Invalid format. Choose txt/json/csv")
 
     def _save_passwords(self, data: dict[str, dict[str, str]]) -> None:
@@ -49,12 +47,12 @@ class Importer(BaseImporter):
         off to PasswordWriter -- shared by every import_from_*/import_*_from_clipboard
         method regardless of source format."""
         if not data:
-            logger.warning("No password entries found to import.")
+            logger.warning("_save_passwords: no entries to import")
             return
 
         writer = PasswordWriter(self.__manager)
         writer.save_passwords(data)
-        logger.debug("Handed off %d parsed entries to PasswordWriter.", len(data))
+        logger.debug("_save_passwords: handed %d entries to PasswordWriter", len(data))
 
     def _parse_txt(self, content: str) -> dict[str, dict[str, str]]:
         result: dict[str, dict[str, str]] = {}
@@ -66,7 +64,7 @@ class Importer(BaseImporter):
             match = _TXT_PATTERN.fullmatch(line)
             if match is None:
                 logger.warning(
-                    "Skipping unparsable txt import line %d: %r", line_number, line
+                    "_parse_txt: skipping unparsable line %d: %r", line_number, line
                 )
                 skipped += 1
                 continue
@@ -76,9 +74,7 @@ class Importer(BaseImporter):
             result[service] = fields
 
         if skipped:
-            logger.warning(
-                "Skipped %d unparsable line(s) while parsing txt import.", skipped
-            )
+            logger.warning("_parse_txt: skipped %d unparsable line(s)", skipped)
 
         return result
 
@@ -86,14 +82,14 @@ class Importer(BaseImporter):
         with open(path) as file:
             data = _PASSWORDS_ADAPTER.validate_json(file.read())
 
-        logger.debug("Parsed %d password entries from json file %r.", len(data), path)
+        logger.debug("import_from_json: parsed %d entries from %r", len(data), path)
         self._save_passwords(data)
 
     def import_from_txt(self, path: str) -> None:
         with open(path) as file:
             data = self._parse_txt(file.read())
 
-        logger.debug("Parsed %d password entries from txt file %r.", len(data), path)
+        logger.debug("import_from_txt: parsed %d entries from %r", len(data), path)
         self._save_passwords(data)
 
     def import_from_csv(self, path: str) -> None:
@@ -107,43 +103,48 @@ class Importer(BaseImporter):
                 login = row.get("login")
                 password = row.get("password")
                 if service is None or login is None or password is None:
-                    logger.warning("Skipping malformed csv row %d: %r", row_number, row)
+                    logger.warning(
+                        "import_from_csv: skipping malformed row %d: %r",
+                        row_number,
+                        row,
+                    )
                     skipped += 1
                     continue
 
                 data[service] = {"login": login, "password": password}
 
         if skipped:
-            logger.warning(
-                "Skipped %d malformed row(s) while parsing csv import.", skipped
-            )
+            logger.warning("import_from_csv: skipped %d malformed row(s)", skipped)
 
-        logger.debug("Parsed %d password entries from csv file %r.", len(data), path)
+        logger.debug("import_from_csv: parsed %d entries from %r", len(data), path)
         self._save_passwords(data)
 
     def import_txt_from_clipboard(self) -> None:
         clip = pyperclip.paste()
         data = self._parse_txt(clip)
 
-        logger.debug("Parsed %d password entries from clipboard.", len(data))
+        logger.debug(
+            "import_txt_from_clipboard: parsed %d entries from clipboard", len(data)
+        )
         self._save_passwords(data)
 
     def import_json_from_clipboard(self) -> None:
         clip = pyperclip.paste()
         data = _PASSWORDS_ADAPTER.validate_json(clip)
 
-        logger.debug("Parsed %d password entries from clipboard.", len(data))
+        logger.debug(
+            "import_json_from_clipboard: parsed %d entries from clipboard", len(data)
+        )
         self._save_passwords(data)
 
     @override
     def import_from_clipboard(self, fmt: str) -> None:
+        logger.info("import_from_clipboard: importing clipboard as %s", fmt)
         match fmt:
             case "txt":
-                logger.info("Importing txt from clipboard.")
                 self.import_txt_from_clipboard()
             case "json":
-                logger.info("Importing json from clipboard.")
                 self.import_json_from_clipboard()
             case _:
-                logger.error("Invalid clipboard format.")
+                logger.error("import_from_clipboard: invalid format %r", fmt)
                 raise ValueError("Invalid format. Choose txt/json")

@@ -28,7 +28,9 @@ class Exporter(BaseExporter):
 
             result[entry.service_name] = {"login": entry.login, "password": password}
 
-        logger.debug("Retrieved %d vault entries for export", len(result))
+        logger.debug(
+            "_retrieve_passwords: decrypted %d entries for export", len(result)
+        )
         return result
 
     def export_to_txt(self, path: str) -> None:
@@ -38,7 +40,7 @@ class Exporter(BaseExporter):
     def export_to_csv(self, path: str) -> None:
         with open(path, "w") as file:
             if not (passwords := self._retrieve_passwords()):
-                logger.info("No passwords found")
+                logger.info("export_to_csv: vault empty, wrote placeholder to %r", path)
                 _ = file.write(",,")
                 return
             result = "service,login,password\n"
@@ -52,12 +54,14 @@ class Exporter(BaseExporter):
     def export_to_json(self, path: str) -> None:
         with open(path, "w") as file:
             if not (passwords := self._retrieve_passwords()):
-                logger.info("No passwords found")
+                logger.info(
+                    "export_to_json: vault empty, wrote empty object to %r", path
+                )
                 _ = file.write("{}")
                 return
 
             json.dump(passwords, file)
-            logger.info("Finished exporting passwords to json.")
+            logger.info("export_to_json: wrote %d entries to %r", len(passwords), path)
 
     @override
     def export_to_file(self, path: str, fmt: str) -> None:
@@ -65,18 +69,16 @@ class Exporter(BaseExporter):
 
         Raises ValueError for an unrecognized fmt.
         """
+        logger.info("export_to_file: exporting to %r as %s", path, fmt)
         match fmt:
             case "json":
                 self.export_to_json(path)
-                logger.info("Exporting to json.")
             case "csv":
                 self.export_to_csv(path)
-                logger.info("Exporting to csv.")
             case "txt":
                 self.export_to_txt(path)
-                logger.info("Exporting to txt.")
             case _:
-                logger.warning("Unrecognized file extension. Abadoned")
+                logger.warning("export_to_file: unrecognized format %r", fmt)
                 raise ValueError("Unrecognized format. Choose txt/json/csv.")
 
     def get_clipboard_json(self) -> None:
@@ -89,7 +91,7 @@ class Exporter(BaseExporter):
 
     def _export_txt(self) -> str:
         if not (passwords := self._retrieve_passwords()):
-            logger.info("No passwords found")
+            logger.info("_export_txt: vault is empty")
         result = ""
         for service, credentials in passwords.items():
             result += f"service={service} / login={credentials['login']} / password={credentials['password']}\n"
@@ -102,11 +104,11 @@ class Exporter(BaseExporter):
         'txt' or 'json'."""
         match fmt:
             case "json":
-                logger.info("Coping json passwords to clipboard.")
+                logger.info("export_to_clipboard: copying json to clipboard")
                 self.get_clipboard_json()
             case "txt":
-                logger.info("Coping passwords to clipboard")
+                logger.info("export_to_clipboard: copying txt to clipboard")
                 self.get_clipboard_txt()
             case _:
-                logger.error("Not recognized format. Abadoned.")
+                logger.error("export_to_clipboard: unrecognized format %r", fmt)
                 raise ValueError("Unrecognized format. Choose txt/json")
