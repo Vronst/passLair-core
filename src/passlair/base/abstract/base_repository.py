@@ -15,7 +15,7 @@ class BaseRepository(ABC):
     def _fetch_row(cls, model: type[T], *, filters: dict[str, object]) -> T | None:
         # Log filter keys only -- values may include user_id/service names,
         # but could just as easily be extended with sensitive lookups later.
-        logger.debug("Fetching %s filtered by %s", model.__name__, list(filters))
+        logger.debug("_fetch_row: %s filtered by %s", model.__name__, list(filters))
         with db.session() as session:
             row = (
                 session.query(model)
@@ -25,6 +25,8 @@ class BaseRepository(ABC):
             )
 
         logger.debug(
-            "%s lookup %s", model.__name__, "found a row" if row else "found nothing"
+            "_fetch_row: %s lookup %s",
+            model.__name__,
+            "found a row" if row else "found nothing",
         )
         return row

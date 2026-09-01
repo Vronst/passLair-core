@@ -60,7 +60,7 @@ class UserWriter(BaseRepository):
             session.add(user)
             session.commit()
 
-        logger.info("Password changed for user_id=%r", user.id)
+        logger.info("change_password: password changed for user_id=%r", user.id)
 
     def reset_password(
         self, username: str, new_password: str, backup_phrase: str
@@ -99,7 +99,7 @@ class UserWriter(BaseRepository):
             session.add(user)
             session.commit()
 
-        logger.info("Password reset via backup phrase for user_id=%r", user.id)
+        logger.info("reset_password: reset via backup phrase for user_id=%r", user.id)
         return new_phrase
 
     @classmethod
@@ -114,7 +114,7 @@ class UserWriter(BaseRepository):
         together with the backup phrase, which the caller must show the user
         exactly once.
         """
-        logger.debug("Preparing new user data for username=%r", username)
+        logger.debug("prepare_new_user: preparing data for username=%r", username)
         salt, hashed_password, kek = hash_new_password(password)
         dek = new_dek()
         encrypted_dek, dek_nonce = wrap_dek(dek, kek)
@@ -171,12 +171,15 @@ class UserWriter(BaseRepository):
                         raise ValueError("Username or email already exists") from e
 
             # Not a uniqueness violation -- don't mislabel it as a duplicate.
-            logger.exception("save_user failed with an unexpected integrity error.")
+            logger.exception(
+                "save_user: unexpected integrity error for username=%r",
+                data.username,
+            )
             raise ValueError(
                 "User could not be saved due to a database constraint."
             ) from e
 
-        logger.info("User %r saved.", data.username)
+        logger.info("save_user: saved user %r", data.username)
 
     def delete_user(self) -> None:
         """Soft-deletes the user and every vault entry they own by stamping
@@ -198,7 +201,7 @@ class UserWriter(BaseRepository):
             user.deleted_at = now
 
         logger.info(
-            "Soft-deleted user_id=%r and %d vault entries",
+            "delete_user: soft-deleted user_id=%r and %d vault entries",
             self.user.user_id,
             entries,
         )
