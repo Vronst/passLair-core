@@ -21,12 +21,15 @@ def is_unique_violation(exc: IntegrityError) -> bool:
     a NOT NULL, foreign-key, or CHECK failure."""
     orig = exc.orig
     text = str(orig).lower()
-    args = getattr(orig, "args", ()) or ()
+    # orig is a BaseException | None; BaseException always has .args as a
+    # variadic tuple, so this stays type-clean (no fixed-length tuple that
+    # mypy could call "index out of range").
+    code = orig.args[0] if orig is not None and orig.args else None
 
     return (
         "unique constraint failed" in text
         or "duplicate entry" in text
-        or (len(args) > 0 and args[0] == _MYSQL_ER_DUP_ENTRY)
+        or code == _MYSQL_ER_DUP_ENTRY
     )
 
 
