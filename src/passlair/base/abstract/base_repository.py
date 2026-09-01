@@ -3,10 +3,11 @@ from abc import ABC
 from typing import TypeVar
 
 from ...core.database.database_manager import db
+from ...core.models.base import SoftDeleteMixin
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
+T = TypeVar("T", bound=SoftDeleteMixin)
 
 
 class BaseRepository(ABC):
@@ -16,7 +17,12 @@ class BaseRepository(ABC):
         # but could just as easily be extended with sensitive lookups later.
         logger.debug("Fetching %s filtered by %s", model.__name__, list(filters))
         with db.session() as session:
-            row = session.query(model).filter_by(**filters).first()
+            row = (
+                session.query(model)
+                .filter_by(**filters)
+                .filter(model.deleted_at.is_(None))
+                .first()
+            )
 
         logger.debug(
             "%s lookup %s", model.__name__, "found a row" if row else "found nothing"

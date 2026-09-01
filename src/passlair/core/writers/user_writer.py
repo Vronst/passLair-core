@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
 
@@ -15,7 +16,9 @@ from ..auth.credentials import (
     wrap_dek,
 )
 from ..database.database_manager import db
+from ..database.integrity import is_unique_violation, violation_names
 from ..models.standard_user import StandardUser
+from ..models.vault_entry import VaultEntry
 
 logger = logging.getLogger(__name__)
 
@@ -147,21 +150,55 @@ class UserWriter(BaseRepository):
                 session.add(entry)
                 session.commit()
         except IntegrityError as e:
-            error_msg = str(e.orig).lower()
+            if is_unique_violation(e):
+                match violation_names(e, "username", "email"):
+                    case "username":
+                        logger.warning(
+                            "save_user rejected: username=%r already exists",
+                            data.username,
+                        )
+                        raise ValueError("Username already exists") from e
+                    case "email":
+                        logger.warning(
+                            "save_user rejected: email already in use for username=%r",
+                            data.username,
+                        )
+                        raise ValueError("Email already exists") from e
+                    case _:
+                        logger.warning(
+                            "save_user rejected: uniqueness violation on an undetermined column"
+                        )
+                        raise ValueError("Username or email already exists") from e
 
-            if "username" in error_msg:
-                logger.warning(
-                    "save_user rejected: username=%r already exists", data.username
-                )
-                raise ValueError("Username already exists")
-            elif "email" in error_msg:
-                logger.warning(
-                    "save_user rejected: email already in use for username=%r",
-                    data.username,
-                )
-                raise ValueError("Email already exists")
-
+            # Not a uniqueness violation -- don't mislabel it as a duplicate.
             logger.exception("save_user failed with an unexpected integrity error.")
-            raise ValueError("User registration failed: Duplication error.")
+            raise ValueError(
+                "User could not be saved due to a database constraint."
+            ) from e
 
         logger.info("User %r saved.", data.username)
+
+    def delete_user(self) -> None:
+        """Soft-deletes the user and every vault entry they own by stamping
+        ``deleted_at`` -- a hard DELETE can't be replicated to the sync peer,
+        a tombstone can."""
+        now = datetime.now()
+        with db.session() as session:
+            user = session.get(StandardUser, self.user.user_id)
+            if user is None or user.deleted_at is not None:
+                logger.warning("delete_user: no live user for id=%r", self.user.user_id)
+                raise ValueError("User doesn't exists!")
+
+            entries = (
+                session.query(VaultEntry)
+                .filter_by(user_id=self.user.user_id)
+                .filter(VaultEntry.deleted_at.is_(None))
+                .update({VaultEntry.deleted_at: now}, synchronize_session=False)
+            )
+            user.deleted_at = now
+
+        logger.info(
+            "Soft-deleted user_id=%r and %d vault entries",
+            self.user.user_id,
+            entries,
+        )

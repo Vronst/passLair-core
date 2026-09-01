@@ -54,7 +54,7 @@ class TestLogin:
         result = identity.login("user", "password")
 
         assert not result.success
-        assert "already logged in" in result.messege
+        assert "already logged in" in result.message
 
 
 class TestLogout:
@@ -147,7 +147,7 @@ class TestRegisterUser:
         result = identity.register_user("login", "email@example.com", "password")
 
         assert not result.success
-        assert "Username already exists" in result.messege
+        assert "Username already exists" in result.message
         manager.login.assert_not_called()
 
 
@@ -175,4 +175,4 @@ class TestResetUserPassword:
         )
 
         assert not result.success
-        assert "User doesn't exists" in result.messege
+        assert "User doesn't exists" in result.message
