@@ -9,5 +9,5 @@ from .base import Base
 class FacadeResult(Base):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
     success: bool
-    messege: str
+    message: str
     data: Mapping[str, object]

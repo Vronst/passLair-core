@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.abstract.base_repository import BaseRepository
@@ -14,18 +15,22 @@ class PasswordWriter(BaseRepository):
     def __init__(self, user: AuthenticatedUser) -> None:
         self.user: AuthenticatedUser = AuthenticatedUser.require(user)
 
-    def save_password(self, service: str, login: str, password: str) -> bool:
+    def save_password(self, service: str, login: str, password: str) -> None:
+        """Saves or updates one vault entry. Like every other writer method,
+        this either succeeds or raises -- there's no partial-failure case to
+        report, so it returns nothing rather than a bool that could only ever
+        be True."""
         data = self._prepare_data(service, login, password)
         entry = self._add_or_update(data)
 
         with db.session() as session:
             session.add(entry)
-            session.commit()
 
         logger.info(
-            "Password saved for service=%r, user_id=%r", service, self.user.user_id
+            "save_password: saved entry for service=%r, user_id=%r",
+            service,
+            self.user.user_id,
         )
-        return True
 
     def save_passwords(self, passwords: dict[str, dict[str, str]]) -> None:
         """Imports a batch of {service: {"login": ..., "password": ...}} entries
@@ -43,6 +48,7 @@ class PasswordWriter(BaseRepository):
                 e.service_name: e
                 for e in session.query(VaultEntry)
                 .filter_by(user_id=self.user.user_id)
+                .filter(VaultEntry.deleted_at.is_(None))
                 .all()
             }
             for service, credentials in passwords.items():
@@ -54,7 +60,9 @@ class PasswordWriter(BaseRepository):
                     entry, login, plain_password, dek
                 ):
                     logger.debug(
-                        "Skipping unchanged import entry for service=%r", service
+                        "save_passwords: unchanged, skipping service=%r (user_id=%r)",
+                        service,
+                        self.user.user_id,
                     )
                     continue
 
@@ -65,7 +73,7 @@ class PasswordWriter(BaseRepository):
                     _ = self._update_password(ready_data, entry)
 
         logger.info(
-            "Finished importing %d password entries for user_id=%r",
+            "save_passwords: imported %d entries for user_id=%r",
             len(passwords),
             self.user.user_id,
         )
@@ -95,7 +103,10 @@ class PasswordWriter(BaseRepository):
         dek = self.user.get_session_key()
 
         if service == "" or login == "" or password == "":
-            logger.warning("_prepare_data rejected empty service/login/password field.")
+            logger.warning(
+                "_prepare_data: rejected empty service/login/password (user_id=%r)",
+                self.user.user_id,
+            )
             raise ValueError("Service name, login and password must not be empty")
 
         encrypted_password, nonce = self._encrypt_password(password, dek)
@@ -135,3 +146,29 @@ class PasswordWriter(BaseRepository):
 
     def _encrypt_password(self, password: str, dek: bytes) -> tuple[bytes, bytes]:
         return encrypt(password.encode("utf-8"), dek)
+
+    def delete_password(self, service: str) -> None:
+        _ = self.user.get_session_key()
+
+        with db.session() as session:
+            entry = (
+                session.query(VaultEntry)
+                .filter_by(user_id=self.user.user_id, service_name=service)
+                .filter(VaultEntry.deleted_at.is_(None))
+                .first()
+            )
+            if entry is None:
+                logger.warning(
+                    "delete_password: no live entry for service=%r (user_id=%r)",
+                    service,
+                    self.user.user_id,
+                )
+                raise ValueError(f"Service {service} not found.")
+
+            entry.deleted_at = datetime.now()
+
+        logger.info(
+            "delete_password: soft-deleted entry for service=%r, user_id=%r",
+            service,
+            self.user.user_id,
+        )

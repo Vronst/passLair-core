@@ -123,7 +123,7 @@ class TestPositive:
         assert "unparsable" in caplog.text.lower()
         # the blank line must not itself be reported as a skipped/malformed
         # entry -- only the one genuinely garbage line counts.
-        assert "Skipped 1 unparsable" in caplog.text
+        assert "skipped 1 unparsable" in caplog.text.lower()
 
     def test_import_from_csv_skips_malformed_rows_and_warns(
         self,
@@ -153,7 +153,7 @@ class TestPositive:
             }
         )
         assert "malformed" in caplog.text.lower()
-        assert "Skipped 1 malformed" in caplog.text
+        assert "skipped 1 malformed" in caplog.text.lower()
 
     def test_import_from_csv_skips_header_row(
         self, mocker: MockerFixture, mock_manager: MagicMock, tmp_path: Path

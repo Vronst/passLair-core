@@ -9,10 +9,10 @@ class BaseFacade(ABC):
         self, msg: str, data: Mapping[str, object] | None = None
     ) -> FacadeResult:
         data = data or {}
-        return FacadeResult(success=True, messege=msg, data=data)
+        return FacadeResult(success=True, message=msg, data=data)
 
     def _failure(
         self, msg: str, data: Mapping[str, object] | None = None
     ) -> FacadeResult:
         data = data or {}
-        return FacadeResult(success=False, messege=msg, data=data)
+        return FacadeResult(success=False, message=msg, data=data)

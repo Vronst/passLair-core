@@ -88,6 +88,6 @@ def user_manager_with_passwords(
 
     pass_writer = PasswordWriter(manager)
     for credentials in passwords:
-        assert pass_writer.save_password(**credentials)
+        pass_writer.save_password(**credentials)
 
     return manager, passwords

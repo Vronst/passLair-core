@@ -99,7 +99,7 @@ class TestNegative:
         test_result = tested.change_user_password("new_password", "old_password")
 
         assert not test_result.success
-        assert "not logged in" in test_result.messege.lower()
+        assert "not logged in" in test_result.message.lower()
 
     def test_register_user_with_duplicate_username(self, register_user: dict[str, str]):
         tested = Identity()
@@ -109,4 +109,4 @@ class TestNegative:
         )
 
         assert not test_result.success
-        assert "username already exists" in test_result.messege.lower()
+        assert "username already exists" in test_result.message.lower()

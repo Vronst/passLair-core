@@ -3,10 +3,10 @@ import uuid
 from sqlalchemy import LargeBinary, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import Base
+from .base import Base, SoftDeleteMixin
 
 
-class VaultEntry(Base):
+class VaultEntry(SoftDeleteMixin, Base):
     """
     Represents an individual encrypted credential stored in the user's vault.
 

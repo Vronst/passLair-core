@@ -4,10 +4,10 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import LargeBinary
 
-from .base import Base
+from .base import Base, SoftDeleteMixin
 
 
-class StandardUser(Base):
+class StandardUser(SoftDeleteMixin, Base):
     __tablename__: str = "standard_users"
 
     id: Mapped[str] = mapped_column(
