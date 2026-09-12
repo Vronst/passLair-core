@@ -19,9 +19,21 @@ class SyncedDualDatabases(BaseFacade):
     to the local one. Allowing local storage with backup online.
     """
 
-    # TODO
-    vault_entry_fields: list[str] = []
-    standard_user_fields: list[str] = []
+    vault_entry_fields: list[str] = ["service_name", "login", "password", "nonce"]
+    standard_user_fields: list[str] = [
+        "username",
+        "email",
+        "master_password",
+        "salt",
+        "dek",
+        "dek_nonce",
+        "backup_dek",
+        "backup_dek_nonce",
+    ]
+    supported_models: dict[str, type[Base]] = {
+        "vault_entry": VaultEntry,
+        "standard_user": StandardUser,
+    }
 
     def __init__(
         self,
@@ -33,7 +45,7 @@ class SyncedDualDatabases(BaseFacade):
         host: str | None = None,
         port: int | None = None,
         database: str | None = None,
-        full_url: str | None = None
+        full_url: str | None = None,
     ) -> None:
         if not full_url and not all([username, password, host, port, database]):
             raise ValueError("Params for mariadb incomplete.")
@@ -48,28 +60,47 @@ class SyncedDualDatabases(BaseFacade):
             password=password,
             host=host,
             port=port,
-            database=database
+            database=database,
         )
 
         self.to_sync: dict[str, dict[str, str]] = {}
 
-        event.listen(self.sqlite.session_factory, 'after_flush', self._add_to_sync)
-        event.listen(self.sqlite.session_factory, 'after_commit', self._commit_sync)
+        event.listen(self.sqlite.session_factory, "after_flush", self._add_to_sync)
+        event.listen(self.sqlite.session_factory, "after_commit", self._commit_sync)
 
     def sync_remote(self) -> FacadeResult:
-        raise NotImplementedError  # TODO
+        failed: list[tuple[str, dict[str, str]]] = []
+        with self.mariadb.session() as session:
+            for model_and_id, field_and_data in self.to_sync.items():
+                model, model_id = model_and_id.split(":")
+                entry = session.get(self.supported_models[model], model_id)
+                if not entry:
+                    failed.append((model_and_id, field_and_data))
+                    continue
+
+                field, data = next(iter(field_and_data.items()))
+                setattr(entry, field, data)
+                session.add(entry)
+
+        if failed:
+            return self._failure("Failed to sync some entries", {'failed': failed})
+
+        return self._success("All entries were synched!")
 
     def _commit_sync(self, session: Session) -> None:
         pending = cast(
             "dict[str, dict[str, str]] | None", session.info.pop("pending_sync", None)
         )
-        if pending:
-            self.to_sync.update(pending)
+        if not pending:
+            return
+
+        for model_and_id, field in pending.items():
+            self.to_sync.setdefault(model_and_id, {}).update(field)
 
     def _add_to_sync(self, session: Session, _: UOWTransaction) -> None:
         storage = session.info
         storage.setdefault("pending_sync", {})
-        pending = cast(dict[str, dict[str, str]], storage['pending_sync'])
+        pending = cast(dict[str, dict[str, str]], storage["pending_sync"])
         identities = chain(session.new, session.dirty)
         # Instance State
         for instance in cast(Iterable[object], identities):
@@ -78,13 +109,13 @@ class SyncedDualDatabases(BaseFacade):
 
             fields, model = self._get_model_and_fields(instance)
             inspection = inspect(instance).attrs
-            wraped_instance_id = inspection['id'].history.unchanged
+            wraped_instance_id = inspection["id"].history.unchanged
             assert wraped_instance_id
             instance_id = cast(str, wraped_instance_id[0])
             for field in fields:
                 _history = inspection[field].history
                 if not _history.has_changes():
-                   continue
+                    continue
 
                 assert _history.added
                 key = f"{model}:{instance_id}"
@@ -92,9 +123,9 @@ class SyncedDualDatabases(BaseFacade):
 
     def _get_model_and_fields(self, instance: Base) -> tuple[list[str], str]:
         if isinstance(instance, VaultEntry):
-            return self.vault_entry_fields, 'vault_entry'
+            return self.vault_entry_fields, "vault_entry"
 
         elif isinstance(instance, StandardUser):
-            return self.standard_user_fields, 'standard_user'
+            return self.standard_user_fields, "standard_user"
 
-        raise NotImplementedError  # TODO
+        raise ValueError(f"Selected model {instance} is not supported.")

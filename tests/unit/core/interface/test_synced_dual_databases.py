@@ -137,7 +137,9 @@ class TestPositive:
         first_id, second_id = first.id, second.id
 
         assert synced.to_sync[f"vault_entry:{first_id}"]["service_name"] == "github.com"
-        assert synced.to_sync[f"vault_entry:{second_id}"]["service_name"] == "gitlab.com"
+        assert (
+            synced.to_sync[f"vault_entry:{second_id}"]["service_name"] == "gitlab.com"
+        )
 
     def test_earlier_transaction_fields_survive_a_later_partial_update(
         self, synced: SyncedDualDatabases
