@@ -117,7 +117,6 @@ class TestListEntries:
 class TestSetPasswordForService:
     def test_success(self, mock_user_manager: MagicMock):
         manager = make_password_manager(mock_user_manager)
-        manager.pass_writer.save_password.return_value = True
 
         result = manager.set_password_for_service("github.com", "bob", "hunter2")
 
@@ -125,15 +124,6 @@ class TestSetPasswordForService:
         manager.pass_writer.save_password.assert_called_once_with(
             "github.com", "bob", "hunter2"
         )
-
-    def test_save_returning_false_reports_failure(self, mock_user_manager: MagicMock):
-        manager = make_password_manager(mock_user_manager)
-        manager.pass_writer.save_password.return_value = False
-
-        result = manager.set_password_for_service("github.com", "bob", "hunter2")
-
-        assert not result.success
-        assert "Failed to save credentials" in result.message
 
     def test_validation_error_reports_failure(self, mock_user_manager: MagicMock):
         manager = make_password_manager(mock_user_manager)

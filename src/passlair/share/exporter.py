@@ -1,33 +1,30 @@
 from typing import override
+import csv
 import json
 import logging
 import pyperclip
 
-from passlair_crypto.package import decrypt_password
-
-from ..core.auth.user_manager import UserManager
+from ..base.abstract.authenticated_user import AuthenticatedUser
 from ..core.readers.password_reader import PasswordReader
 from ..base.abstract.base_exporter import BaseExporter
 
 logger = logging.getLogger(__name__)
 
+_CSV_FIELDNAMES = ["service", "login", "password"]
+
 
 class Exporter(BaseExporter):
-    def __init__(self, manager: UserManager) -> None:
+    def __init__(self, manager: AuthenticatedUser) -> None:
         self.__manager = manager
 
     def _retrieve_passwords(self) -> dict[str, dict[str, str]]:
         """Returns {service: {"login": ..., "password": ...}} for every vault
-        entry belonging to the logged-in user."""
-        vault_entries = PasswordReader(self.__manager).get_all_passwords()
-        result: dict[str, dict[str, str]] = {}
-        for entry in vault_entries:
-            password = decrypt_password(
-                entry.password, entry.nonce, self.__manager.get_session_key()
-            ).decode("utf-8")
+        entry belonging to the logged-in user.
 
-            result[entry.service_name] = {"login": entry.login, "password": password}
-
+        Delegates to PasswordReader.get_all_decrypted() rather than
+        re-deriving the same decrypt-every-entry logic here, so the two
+        can't drift apart."""
+        result = PasswordReader(self.__manager).get_all_decrypted()
         logger.debug(
             "_retrieve_passwords: decrypted %d entries for export", len(result)
         )
@@ -38,18 +35,22 @@ class Exporter(BaseExporter):
             _ = file.write(self._export_txt())
 
     def export_to_csv(self, path: str) -> None:
-        with open(path, "w") as file:
-            if not (passwords := self._retrieve_passwords()):
-                logger.info("export_to_csv: vault empty, wrote placeholder to %r", path)
-                _ = file.write(",,")
+        # csv.DictWriter, not manual string-joining -- a service/login/password
+        # containing a comma, quote, or newline (routine for real passwords)
+        # would otherwise produce corrupt, unparsable CSV. newline="" per the
+        # csv module's own recommendation, so it -- not open() -- controls
+        # line endings.
+        with open(path, "w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=_CSV_FIELDNAMES)
+            writer.writeheader()
+            passwords = self._retrieve_passwords()
+            if not passwords:
+                logger.info("export_to_csv: vault empty, wrote header only to %r", path)
                 return
-            result = "service,login,password\n"
-            for service, credentials in passwords.items():
-                result += (
-                    f"{service},{credentials['login']},{credentials['password']}\n"
-                )
 
-            _ = file.write(result)
+            for service, credentials in passwords.items():
+                writer.writerow({"service": service, **credentials})
+            logger.info("export_to_csv: wrote %d entries to %r", len(passwords), path)
 
     def export_to_json(self, path: str) -> None:
         with open(path, "w") as file:

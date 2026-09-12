@@ -27,14 +27,14 @@ class Identity(BaseFacade):
     @property
     def login_status(self) -> FacadeResult:
         if self.manager.login_status:
-            return self._success("User loged in.", {"user_id": self.manager.user_id})
+            return self._success("User logged in.", {"user_id": self.manager.user_id})
 
-        return self._failure("User not loged in.")
+        return self._failure("User not logged in.")
 
     def login(self, username: str, password: str) -> FacadeResult:
         try:
             if self.manager.login(username, password):
-                return self._success("Successfully loged in.")
+                return self._success("Successfully logged in.")
 
             return self._failure("Username or password incorrect.")
         except RuntimeError as e:
@@ -48,7 +48,7 @@ class Identity(BaseFacade):
             logger.warning("logout: rejected: %s", e)
             return self._failure(str(e))
 
-        return self._success("Loged out.")
+        return self._success("Logged out.")
 
     def change_user_password(
         self, new_password: str, old_password: str
@@ -114,8 +114,10 @@ class Identity(BaseFacade):
         Returns:
             FacadeResult: A success or failure result indicating the outcome of the registration.
         """
-        user, backup_phrase = self.user_writer.prepare_new_user(login, email, password)
         try:
+            user, backup_phrase = self.user_writer.prepare_new_user(
+                login, email, password
+            )
             self.user_writer.save_user(user)
             logged = self.manager.login(login, password)
             if not logged:

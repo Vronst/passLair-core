@@ -15,7 +15,11 @@ class PasswordWriter(BaseRepository):
     def __init__(self, user: AuthenticatedUser) -> None:
         self.user: AuthenticatedUser = AuthenticatedUser.require(user)
 
-    def save_password(self, service: str, login: str, password: str) -> bool:
+    def save_password(self, service: str, login: str, password: str) -> None:
+        """Saves or updates one vault entry. Like every other writer method,
+        this either succeeds or raises -- there's no partial-failure case to
+        report, so it returns nothing rather than a bool that could only ever
+        be True."""
         data = self._prepare_data(service, login, password)
         entry = self._add_or_update(data)
 
@@ -27,7 +31,6 @@ class PasswordWriter(BaseRepository):
             service,
             self.user.user_id,
         )
-        return True
 
     def save_passwords(self, passwords: dict[str, dict[str, str]]) -> None:
         """Imports a batch of {service: {"login": ..., "password": ...}} entries

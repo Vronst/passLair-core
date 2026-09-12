@@ -6,8 +6,8 @@ from typing import override
 import pyperclip
 from pydantic import TypeAdapter
 
+from ..base.abstract.authenticated_user import AuthenticatedUser
 from ..base.abstract.base_importer import BaseImporter
-from ..core.auth.user_manager import UserManager
 from ..core.writers.password_writer import PasswordWriter
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ _TXT_PATTERN = re.compile(
 
 
 class Importer(BaseImporter):
-    def __init__(self, manager: UserManager) -> None:
+    def __init__(self, manager: AuthenticatedUser) -> None:
         self.__manager = manager
 
     @override

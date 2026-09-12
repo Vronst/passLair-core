@@ -68,7 +68,9 @@ class TestLogout:
 
     def test_not_logged_in_reports_failure_instead_of_raising(self):
         identity, manager, _ = make_identity()
-        manager.logout.side_effect = RuntimeError("Tried login out when not loged.")
+        manager.logout.side_effect = RuntimeError(
+            "Tried to log out while not logged in."
+        )
 
         result = identity.logout()
 

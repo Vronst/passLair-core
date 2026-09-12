@@ -93,13 +93,11 @@ class TestPositive:
             ) as mock_add,
             patch("passlair.core.writers.password_writer.db", mock_session),
         ):
-            test_data = writer.save_password(
+            writer.save_password(
                 service=password_data.service_name,
                 login=password_data.login,
                 password=password,
             )
-
-        assert test_data
 
         mock_add.assert_called_once_with(password_data)
         mock_prepare.assert_called_once_with(

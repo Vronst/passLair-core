@@ -76,7 +76,7 @@ class UserManager(AuthenticatedUser):
     def logout(self) -> None:
         if not self.__dek or not self.user_id:
             logger.warning("logout: attempted with no active session")
-            raise RuntimeError("Tried login out when not loged.")
+            raise RuntimeError("Tried to log out while not logged in.")
 
         logger.info("logout: user_id=%r logged out", self.__user_id)
         self.__dek = None

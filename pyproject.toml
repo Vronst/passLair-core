@@ -38,7 +38,12 @@ executionEnvironments = [
     # unittest.mock.MagicMock attribute access is untyped by design, so
     # reportAny fires on nearly every mock interaction in the test suite --
     # not worth chasing there. src/ keeps the default (reportAny stays on).
-    { root = "tests", reportAny = false, reportPrivateUsage = false, reportArgumentType = false, reportAttributeAccessIssue = false, reportUnknownMemberType = false, reportUnusedParameter = false },
+    #
+    # extraPaths adds the project root back to the search path for files
+    # under tests/ -- without it, pyright can't resolve an absolute
+    # "tests.foo.bar" import from inside tests/ itself (root below narrows
+    # which files this override applies to, it doesn't widen resolution).
+    { root = "tests", extraPaths = ["."], reportAny = false, reportPrivateUsage = false, reportArgumentType = false, reportAttributeAccessIssue = false, reportUnknownMemberType = false, reportUnusedParameter = false },
 ]
 
 [tool.mypy]
@@ -60,10 +65,10 @@ executionEnvironments = [
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-# There's no tests/__init__.py, so mypy doesn't resolve these under a
-# "tests." prefix -- it names them by their path relative to tests/ instead
-# (e.g. tests/unit/core/test_crypto.py -> module "unit.core.test_crypto").
-module = ["unit.*", "integration.*", "conftest"]
+# tests/__init__.py makes "tests" a real package, so mypy names these
+# modules with the "tests." prefix (e.g. tests/unit/core/test_crypto.py ->
+# module "tests.unit.core.test_crypto").
+module = ["tests.*"]
 disable_error_code = ["arg-type", "index", "attr-defined"]
 
 [tool.pytest.ini_options]
