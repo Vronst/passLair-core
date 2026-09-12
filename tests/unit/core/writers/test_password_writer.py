@@ -387,7 +387,7 @@ class TestNegative:
             patch("passlair.core.writers.password_writer.db", mock_session),
         ):
             with pytest.raises(SQLAlchemyError, match="DB Operational Error"):
-                _ = writer.save_password(
+                writer.save_password(
                     service=password_data.service_name,
                     login=password_data.login,
                     password=password,
