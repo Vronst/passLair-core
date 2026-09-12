@@ -1,3 +1,4 @@
+from types import TracebackType
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,7 +23,11 @@ def build_mock_db_session() -> tuple[MagicMock, MagicMock]:
     re-deriving this exit behavior."""
     mock_session = MagicMock()
 
-    def fake_exit(exc_type, exc_val, exc_tb):
+    def fake_exit(
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool:
         if exc_type is None:
             try:
                 mock_session.commit()

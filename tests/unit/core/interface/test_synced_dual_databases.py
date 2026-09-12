@@ -10,7 +10,7 @@ from passlair.core.models.vault_entry import VaultEntry
 CREATE_ENGINE_TARGET = "passlair.core.database.database_manager.create_engine"
 
 
-def _fake_create_engine(url, *args, **kwargs):
+def _fake_create_engine(url: str, *args: object, **kwargs: object):
     """Lets the local SQLite side build a real engine (so flush/commit events
     actually fire) while faking out the MariaDB side, which would otherwise
     try to open a real network connection during __init__/create_tables."""
@@ -189,7 +189,7 @@ class TestNegative:
     def test_constructor_rejects_incomplete_component_set(self):
         with patch(CREATE_ENGINE_TARGET, side_effect=_fake_create_engine):
             with pytest.raises(ValueError, match="Params for mariadb incomplete"):
-                SyncedDualDatabases(":memory:", username="vronst")
+                _ = SyncedDualDatabases(":memory:", username="vronst")
 
     def test_unmodified_flush_records_nothing(self, synced: SyncedDualDatabases):
         """Merely loading and re-saving a row with no actual attribute

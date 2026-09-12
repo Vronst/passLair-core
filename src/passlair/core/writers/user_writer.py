@@ -113,9 +113,7 @@ class UserWriter(BaseRepository):
         exactly once.
         """
         if username == "" or email == "" or password == "":
-            logger.warning(
-                "prepare_new_user: rejected empty username/email/password"
-            )
+            logger.warning("prepare_new_user: rejected empty username/email/password")
             raise ValueError("Username, email and password must not be empty")
 
         logger.debug("prepare_new_user: preparing data for username=%r", username)

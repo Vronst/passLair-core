@@ -83,7 +83,7 @@ class SyncedDualDatabases(BaseFacade):
                 session.add(entry)
 
         if failed:
-            return self._failure("Failed to sync some entries", {'failed': failed})
+            return self._failure("Failed to sync some entries", {"failed": failed})
 
         return self._success("All entries were synched!")
 
