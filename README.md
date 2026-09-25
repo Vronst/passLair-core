@@ -4,7 +4,7 @@
 - [About](#about)
 - [Installation](#instalation)
 - [Features](#features)
-- [AI Usage](#ai_usage)
+- [AI Usage](#ai-usage)
 
 ## About
 Since I started working in IT, I understood the importance of strong password. I also understand how hard it is to remember siad password.
