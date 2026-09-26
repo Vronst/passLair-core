@@ -1,5 +1,5 @@
-from typing import override
 import logging
+from typing import override
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
 from ..models.standard_user import StandardUser
@@ -21,9 +21,7 @@ class UserManager(AuthenticatedUser):
 
     @property
     def login_status(self) -> bool:
-        if self.__dek and self.__user_id:
-            return True
-        return False
+        return bool(self.__dek and self.__user_id)
 
     def login(self, username: str, password: str) -> bool:
         """

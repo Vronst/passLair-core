@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -246,9 +246,11 @@ class TestNegative:
     def test_change_password_user_not_found(self, mock_user_manager: MagicMock):
         writer = UserWriter(user=mock_user_manager)
 
-        with patch.object(UserWriter, "_fetch_row", return_value=None):
-            with pytest.raises(ValueError, match="User doesn't exists"):
-                writer.change_password("new_password", "old_password")
+        with (
+            patch.object(UserWriter, "_fetch_row", return_value=None),
+            pytest.raises(ValueError, match="User doesn't exists"),
+        ):
+            writer.change_password("new_password", "old_password")
 
     def test_change_password_wrong_old_password(
         self, mock_user: MagicMock, mock_user_manager: MagicMock
@@ -260,25 +262,29 @@ class TestNegative:
             patch(
                 "passlair.core.writers.user_writer.verify_password", return_value=None
             ),
+            pytest.raises(ValueError, match="Old password incorrect"),
         ):
-            with pytest.raises(ValueError, match="Old password incorrect"):
-                writer.change_password("new_password", "old_password")
+            writer.change_password("new_password", "old_password")
 
     def test_reset_password_user_not_found(self, mock_user_manager: MagicMock):
         writer = UserWriter(user=mock_user_manager)
 
-        with patch.object(UserWriter, "_fetch_row", return_value=None):
-            with pytest.raises(ValueError, match="User doesn't exists"):
-                _ = writer.reset_password("bob", "new_password", "irrelevant phrase")
+        with (
+            patch.object(UserWriter, "_fetch_row", return_value=None),
+            pytest.raises(ValueError, match="User doesn't exists"),
+        ):
+            _ = writer.reset_password("bob", "new_password", "irrelevant phrase")
 
     def test_reset_password_bad_phrase_rejected(
         self, mock_user: MagicMock, mock_user_manager: MagicMock
     ):
         writer = UserWriter(user=mock_user_manager)
 
-        with patch.object(UserWriter, "_fetch_row", return_value=mock_user):
-            with pytest.raises(ValueError, match="Backup phrase"):
-                _ = writer.reset_password("bob", "new_password", "not a valid phrase")
+        with (
+            patch.object(UserWriter, "_fetch_row", return_value=mock_user),
+            pytest.raises(ValueError, match="Backup phrase"),
+        ):
+            _ = writer.reset_password("bob", "new_password", "not a valid phrase")
 
     def test_init_fails_with_invalid_user(self):
         """Regression guard: UserWriter must depend on AuthenticatedUser, not a concrete class."""
@@ -325,7 +331,7 @@ class TestDeleteUser:
         mock_db_session: tuple[MagicMock, MagicMock],
     ):
         mock_session, _ = mock_db_session
-        mock_user.deleted_at = datetime.now()
+        mock_user.deleted_at = datetime.now(UTC)
         mock_session.get.return_value = mock_user
 
         with pytest.raises(ValueError, match="User doesn't exists"):

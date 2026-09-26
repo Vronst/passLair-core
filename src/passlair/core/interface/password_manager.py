@@ -1,7 +1,7 @@
 # This is core Facade, so this only wraps core functions, updating password etc should be in WEB or CLI
-from ...dataclasses.facade_result import FacadeResult
-from ...base.abstract.base_facade import BaseFacade
 from ...base.abstract.authenticated_user import AuthenticatedUser
+from ...base.abstract.base_facade import BaseFacade
+from ...dataclasses.facade_result import FacadeResult
 from ..readers.password_reader import PasswordReader
 from ..writers.password_writer import PasswordWriter
 

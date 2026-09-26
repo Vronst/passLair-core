@@ -4,12 +4,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from tests.unit.core.conftest import build_mock_db_session
-
 from passlair.core.crypto import encrypt
 from passlair.core.models.vault_entry import VaultEntry
 from passlair.core.writers.password_writer import PasswordWriter
 from passlair.dataclasses.password_data import PasswordCreation
+from tests.unit.core.conftest import build_mock_db_session
 
 REAL_DEK = b"a_real_32_byte_session_key_here!"
 
@@ -36,9 +35,7 @@ def patch_db_for_query(existing: list[VaultEntry]) -> tuple[MagicMock, MagicMock
     whose `session()` context manager yields a session whose
     `query(...).filter_by(...).filter(...).all()` returns `existing`."""
     mock_db, mock_session = build_mock_db_session()
-    mock_session.query.return_value.filter_by.return_value.filter.return_value.all.return_value = (  # noqa: E501
-        existing
-    )
+    mock_session.query.return_value.filter_by.return_value.filter.return_value.all.return_value = existing
     return mock_db, mock_session
 
 
@@ -46,9 +43,7 @@ def patch_db_for_first(found: VaultEntry | None) -> tuple[MagicMock, MagicMock]:
     """Like patch_db_for_query, but the `query(...).filter_by(...).filter(...)
     .first()` chain returns `found` -- used by delete_password."""
     mock_db, mock_session = build_mock_db_session()
-    mock_session.query.return_value.filter_by.return_value.filter.return_value.first.return_value = (  # noqa: E501
-        found
-    )
+    mock_session.query.return_value.filter_by.return_value.filter.return_value.first.return_value = found
     return mock_db, mock_session
 
 
@@ -385,13 +380,13 @@ class TestNegative:
                 side_effect=SQLAlchemyError("DB Operational Error"),
             ),
             patch("passlair.core.writers.password_writer.db", mock_session),
+            pytest.raises(SQLAlchemyError, match="DB Operational Error"),
         ):
-            with pytest.raises(SQLAlchemyError, match="DB Operational Error"):
-                writer.save_password(
-                    service=password_data.service_name,
-                    login=password_data.login,
-                    password=password,
-                )
+            writer.save_password(
+                service=password_data.service_name,
+                login=password_data.login,
+                password=password,
+            )
 
 
 class TestDeletePassword:
@@ -413,9 +408,11 @@ class TestDeletePassword:
         mock_db, mock_session = patch_db_for_first(None)
         writer = PasswordWriter(mock_user_manager)
 
-        with patch("passlair.core.writers.password_writer.db", mock_db):
-            with pytest.raises(ValueError, match="not found"):
-                writer.delete_password("nope.com")
+        with (
+            patch("passlair.core.writers.password_writer.db", mock_db),
+            pytest.raises(ValueError, match="not found"),
+        ):
+            writer.delete_password("nope.com")
 
         mock_session.delete.assert_not_called()
 
@@ -428,8 +425,10 @@ class TestDeletePassword:
         )
         writer = PasswordWriter(mock_user_manager)
 
-        with patch("passlair.core.writers.password_writer.db", mock_db):
-            with pytest.raises(PermissionError):
-                writer.delete_password("github.com")
+        with (
+            patch("passlair.core.writers.password_writer.db", mock_db),
+            pytest.raises(PermissionError),
+        ):
+            writer.delete_password("github.com")
 
         mock_db.session.assert_not_called()

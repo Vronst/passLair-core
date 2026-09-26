@@ -3,9 +3,9 @@
 import logging
 from typing import TYPE_CHECKING
 
-from ..readers.helpers import compare_passwords
 from ...base.abstract.base_facade import BaseFacade
 from ..auth.user_manager import UserManager
+from ..readers.helpers import compare_passwords
 from ..writers.user_writer import UserWriter
 
 logger = logging.getLogger(__name__)

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.abstract.base_repository import BaseRepository
@@ -165,7 +165,7 @@ class PasswordWriter(BaseRepository):
                 )
                 raise ValueError(f"Service {service} not found.")
 
-            entry.deleted_at = datetime.now()
+            entry.deleted_at = datetime.now(UTC)
 
         logger.info(
             "delete_password: soft-deleted entry for service=%r, user_id=%r",
