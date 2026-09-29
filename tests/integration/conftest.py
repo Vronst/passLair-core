@@ -1,12 +1,13 @@
-import pytest
 from collections.abc import Generator
 
+import pytest
+
+from passlair.core.auth.user_manager import UserManager
 from passlair.core.database.database_manager import db as original_db
 from passlair.core.models.standard_user import StandardUser
 from passlair.core.readers.user_reader import UserReader
-from passlair.core.writers.user_writer import UserWriter
 from passlair.core.writers.password_writer import PasswordWriter
-from passlair.core.auth.user_manager import UserManager
+from passlair.core.writers.user_writer import UserWriter
 
 
 @pytest.fixture(autouse=True)
@@ -45,7 +46,7 @@ def _register_user(username: str, email: str, password: str = "test_password"):
 
 
 @pytest.fixture(autouse=False)
-def register_user() -> Generator[dict[str, str], None, None]:
+def register_user() -> Generator[dict[str, str]]:
     username = "test_user"
     email = "example@example.com"
     password = "test_password"
@@ -53,7 +54,7 @@ def register_user() -> Generator[dict[str, str], None, None]:
 
 
 @pytest.fixture(autouse=False)
-def register_user2() -> Generator[dict[str, str], None, None]:
+def register_user2() -> Generator[dict[str, str]]:
     username = "test_user2"
     email = "example2@example.com"
     password = "test_password2"

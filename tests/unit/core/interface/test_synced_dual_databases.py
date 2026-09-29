@@ -187,9 +187,11 @@ class TestPositive:
 
 class TestNegative:
     def test_constructor_rejects_incomplete_component_set(self):
-        with patch(CREATE_ENGINE_TARGET, side_effect=_fake_create_engine):
-            with pytest.raises(ValueError, match="Params for mariadb incomplete"):
-                _ = SyncedDualDatabases(":memory:", username="vronst")
+        with (
+            patch(CREATE_ENGINE_TARGET, side_effect=_fake_create_engine),
+            pytest.raises(ValueError, match="Params for mariadb incomplete"),
+        ):
+            _ = SyncedDualDatabases(":memory:", username="vronst")
 
     def test_unmodified_flush_records_nothing(self, synced: SyncedDualDatabases):
         """Merely loading and re-saving a row with no actual attribute

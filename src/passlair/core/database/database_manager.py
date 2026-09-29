@@ -1,21 +1,20 @@
-from typing import TYPE_CHECKING
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
-from sqlalchemy import MetaData, create_engine, make_url, URL
+from sqlalchemy import URL, MetaData, create_engine, make_url
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
-from ..models.base import Base
 from ...dataclasses.db_connection import DBConnection
+from ..models.base import Base
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
-    from sqlalchemy.orm import scoped_session
 
 
 class DatabaseManager:
@@ -172,7 +171,7 @@ class DatabaseManager:
         base_metadata.create_all(bind=self._engine)
 
     @contextmanager
-    def session(self) -> Generator[Session, None, None]:
+    def session(self) -> Generator[Session]:
         """
         Context manager providing a secure scope for database operations.
         Automatically commits changes or rolls back transactions on failure.

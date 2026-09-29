@@ -1,4 +1,5 @@
 from typing import override
+
 import pytest
 
 from passlair.base.abstract.authenticated_user import AuthenticatedUser

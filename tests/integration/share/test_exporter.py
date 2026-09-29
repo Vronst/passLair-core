@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
-from passlair.share.exporter import Exporter
 from passlair.core.auth.user_manager import UserManager
+from passlair.share.exporter import Exporter
 
 
 class TestPositive:

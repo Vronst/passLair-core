@@ -12,7 +12,7 @@ class AuthenticatedUser(ABC):
         pass
 
     @classmethod
-    def require(cls, user: "AuthenticatedUser") -> "AuthenticatedUser":
+    def require(cls, user: AuthenticatedUser) -> AuthenticatedUser:
         """Validates a constructor argument, shared by every class that takes a user session."""
         if not isinstance(user, cls):
             raise TypeError(

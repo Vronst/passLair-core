@@ -1,10 +1,10 @@
-from typing import TypeVar, cast, override
+from typing import ClassVar, TypeVar, cast, override
 
 _T = TypeVar("_T")
 
 
 class SingletonMeta(type):
-    _instances: dict[type, object] = {}
+    _instances: ClassVar[dict[type, object]] = {}
 
     @override
     def __call__(cls: type[_T], *args: object, **kwargs: object) -> _T:

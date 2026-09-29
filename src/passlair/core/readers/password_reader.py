@@ -1,12 +1,11 @@
 import logging
 
-
 from sqlalchemy import select
 
 from ...base.abstract.authenticated_user import AuthenticatedUser
 from ...base.abstract.base_repository import BaseRepository
-from ..database.database_manager import db
 from ..crypto import decrypt
+from ..database.database_manager import db
 from ..models.vault_entry import VaultEntry
 
 logger = logging.getLogger(__name__)

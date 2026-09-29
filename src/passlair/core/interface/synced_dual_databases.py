@@ -1,10 +1,12 @@
-from typing import cast
-from itertools import chain
 from collections.abc import Iterable
+from itertools import chain
+from typing import ClassVar, cast
+
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session, UOWTransaction
-from ...dataclasses.facade_result import FacadeResult
+
 from ...base.abstract.base_facade import BaseFacade
+from ...dataclasses.facade_result import FacadeResult
 from ..database.database_manager import DatabaseManager, db
 from ..models.base.base import Base
 from ..models.standard_user import StandardUser
@@ -19,8 +21,13 @@ class SyncedDualDatabases(BaseFacade):
     to the local one. Allowing local storage with backup online.
     """
 
-    vault_entry_fields: list[str] = ["service_name", "login", "password", "nonce"]
-    standard_user_fields: list[str] = [
+    vault_entry_fields: ClassVar[list[str]] = [
+        "service_name",
+        "login",
+        "password",
+        "nonce",
+    ]
+    standard_user_fields: ClassVar[list[str]] = [
         "username",
         "email",
         "master_password",
@@ -30,7 +37,7 @@ class SyncedDualDatabases(BaseFacade):
         "backup_dek",
         "backup_dek_nonce",
     ]
-    supported_models: dict[str, type[Base]] = {
+    supported_models: ClassVar[dict[str, type[Base]]] = {
         "vault_entry": VaultEntry,
         "standard_user": StandardUser,
     }

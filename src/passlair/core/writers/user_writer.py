@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
 
@@ -186,7 +186,7 @@ class UserWriter(BaseRepository):
         """Soft-deletes the user and every vault entry they own by stamping
         ``deleted_at`` -- a hard DELETE can't be replicated to the sync peer,
         a tombstone can."""
-        now = datetime.now()
+        now = datetime.now(UTC)
         with db.session() as session:
             user = session.get(StandardUser, self.user.user_id)
             if user is None or user.deleted_at is not None:

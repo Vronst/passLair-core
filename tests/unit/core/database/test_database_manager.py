@@ -107,9 +107,11 @@ class TestPositive:
         assert db._engine is None
         assert db._session_factory is None
 
-        with pytest.raises(RuntimeError, match="DatabaseManager is not initialized"):
-            with db.session():
-                pass
+        with (
+            pytest.raises(RuntimeError, match="DatabaseManager is not initialized"),
+            db.session(),
+        ):
+            pass
 
     def test_session_successful_commit(self, db: DatabaseManager):
         """Verify healthy sessions yield a working session, commit, and close cleanly."""
@@ -128,9 +130,11 @@ class TestPositive:
 class TestNegative:
     def test_session_context_manager_uninitialized_error(self, db: DatabaseManager):
         """The context manager must fail gracefully if called before initialization."""
-        with pytest.raises(RuntimeError, match="DatabaseManager is not initialized"):
-            with db.session():
-                pass
+        with (
+            pytest.raises(RuntimeError, match="DatabaseManager is not initialized"),
+            db.session(),
+        ):
+            pass
 
     def test_init_mariadb_incomplete_config_raises(self, db: DatabaseManager):
         """Neither a full_url nor a complete component set -> ValueError."""
@@ -146,9 +150,11 @@ class TestNegative:
         # Force the factory to yield our mock session instead
         db._session_factory = MagicMock(return_value=mock_session_instance)
 
-        with pytest.raises(ValueError, match="Simulated application error"):
-            with db.session():
-                raise ValueError("Simulated application error")
+        with (
+            pytest.raises(ValueError, match="Simulated application error"),
+            db.session(),
+        ):
+            raise ValueError("Simulated application error")
 
         # Assert transactional boundary logic
         mock_session_instance.rollback.assert_called_once()

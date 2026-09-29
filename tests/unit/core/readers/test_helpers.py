@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+
 from passlair.core.readers.helpers import compare_passwords
 from passlair.core.readers.user_reader import UserReader
 

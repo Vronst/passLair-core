@@ -20,7 +20,7 @@ entry = VaultEntry(**data)
 
 
 @pytest.fixture
-def mock_password_reader_db() -> Generator[tuple[MagicMock, MagicMock], None, None]:
+def mock_password_reader_db() -> Generator[tuple[MagicMock, MagicMock]]:
     """Abstracts the context-managed db.session() nesting for get_all_passwords."""
     with patch("passlair.core.readers.password_reader.db") as mock_db:
         mock_session = MagicMock()
