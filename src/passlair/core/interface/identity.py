@@ -102,22 +102,19 @@ class Identity(BaseFacade):
         )
         return self._success("Password was reset.", {"backup_phrase": new_phrase})
 
-    def register_user(self, login: str, email: str, password: str) -> FacadeResult:
+    def register_user(self, login: str, password: str) -> FacadeResult:
         """
         Registers a new user by saving their data and logging them in.
 
         Args:
             login (str): The username of the new user.
-            email (str): The email of the new user.
             password (str): The password of the new user.
 
         Returns:
             FacadeResult: A success or failure result indicating the outcome of the registration.
         """
         try:
-            user, backup_phrase = self.user_writer.prepare_new_user(
-                login, email, password
-            )
+            user, backup_phrase = self.user_writer.prepare_new_user(login, password)
             self.user_writer.save_user(user)
             logged = self.manager.login(login, password)
             if not logged:

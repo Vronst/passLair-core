@@ -46,9 +46,7 @@ class TestPositive:
         Tests if user is able to be registered, and if the user is logged right after registration.
         """
         tested = Identity()
-        test_result = tested.register_user(
-            "brand_new_user", "brand_new_user@example.com", "test_password"
-        )
+        test_result = tested.register_user("brand_new_user", "test_password")
 
         assert test_result.success
         assert tested.login_status.success
@@ -105,7 +103,7 @@ class TestNegative:
         tested = Identity()
 
         test_result = tested.register_user(
-            register_user["username"], "someone_else@example.com", "another_password"
+            register_user["username"], "another_password"
         )
 
         assert not test_result.success

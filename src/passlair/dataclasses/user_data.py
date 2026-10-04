@@ -5,7 +5,6 @@ class UserCreation(Base):
     """
     Args:
         username (str)
-        email (str)
         master_password (bytes): Password hash produced by derive_keys.
         salt (bytes)
         dek (bytes): DEK encrypted under the KEK derived from the password.
@@ -15,7 +14,6 @@ class UserCreation(Base):
     """
 
     username: str
-    email: str
     master_password: bytes
     salt: bytes
     dek: bytes

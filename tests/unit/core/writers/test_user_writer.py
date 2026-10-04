@@ -24,12 +24,9 @@ class TestPositive:
 
     def test_prepare_new_user(self):
         """Regression guard: must produce real bytes (not bytearray/str) for every field."""
-        data, backup_phrase = UserWriter.prepare_new_user(
-            "bob", "bob@example.com", "hunter2"
-        )
+        data, backup_phrase = UserWriter.prepare_new_user("bob", "hunter2")
 
         assert data.username == "bob"
-        assert data.email == "bob@example.com"
         assert isinstance(data.master_password, bytes)
         assert isinstance(data.salt, bytes)
         assert isinstance(data.dek, bytes)
@@ -179,19 +176,6 @@ class TestNegative:
         with pytest.raises(ValueError, match="Username already exists"):
             UserWriter.save_user(mock_user_data)
 
-    def test_save_user_raises_on_duplicate_email(
-        self,
-        mock_db_session: tuple[MagicMock, MagicMock],
-        mock_user_data: UserCreation,
-    ):
-        mock_session, _ = mock_db_session
-        mock_session.commit.side_effect = IntegrityError(
-            "INSERT", {}, Exception("UNIQUE constraint failed: standard_users.email")
-        )
-
-        with pytest.raises(ValueError, match="Email already exists"):
-            UserWriter.save_user(mock_user_data)
-
     def test_save_user_raises_on_duplicate_username_mysql_style(
         self,
         mock_db_session: tuple[MagicMock, MagicMock],
@@ -235,7 +219,7 @@ class TestNegative:
         mock_session.commit.side_effect = IntegrityError(
             "INSERT",
             {},
-            Exception("NOT NULL constraint failed: standard_users.email"),
+            Exception("NOT NULL constraint failed: standard_users.salt"),
         )
 
         with pytest.raises(ValueError, match="database constraint") as excinfo:

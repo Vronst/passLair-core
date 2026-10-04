@@ -16,7 +16,7 @@ def set_up_db():
     return original_db
 
 
-def _register_user(username: str, email: str, password: str = "test_password"):
+def _register_user(username: str, password: str = "test_password"):
     """
     Registers a real user through the actual UserWriter pipeline (so the
     stored master_password/dek are consistent with what login/change_password
@@ -26,16 +26,15 @@ def _register_user(username: str, email: str, password: str = "test_password"):
     authenticate, since it bypasses derive_keys entirely.
 
     Yields:
-        dict: username, email, plaintext password, and the new user's id.
+        dict: username, plaintext password, and the new user's id.
     """
-    data, backup_phrase = UserWriter.prepare_new_user(username, email, password)
+    data, backup_phrase = UserWriter.prepare_new_user(username, password)
     UserWriter.save_user(data)
     user = UserReader.get_user_by_name(username)
     assert user is not None
 
     yield {
         "username": username,
-        "email": email,
         "password": password,
         "user_id": user.id,
         "backup_phrase": backup_phrase,
@@ -48,17 +47,15 @@ def _register_user(username: str, email: str, password: str = "test_password"):
 @pytest.fixture(autouse=False)
 def register_user() -> Generator[dict[str, str]]:
     username = "test_user"
-    email = "example@example.com"
     password = "test_password"
-    yield from _register_user(username, email, password)
+    yield from _register_user(username, password)
 
 
 @pytest.fixture(autouse=False)
 def register_user2() -> Generator[dict[str, str]]:
     username = "test_user2"
-    email = "example2@example.com"
     password = "test_password2"
-    yield from _register_user(username, email, password)
+    yield from _register_user(username, password)
 
 
 @pytest.fixture(autouse=False)

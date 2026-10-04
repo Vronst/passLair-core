@@ -20,9 +20,16 @@ def _fake_create_engine(url: str, *args: object, **kwargs: object):
 
 
 @pytest.fixture
-def synced() -> SyncedDualDatabases:
+def synced(monkeypatch: pytest.MonkeyPatch) -> SyncedDualDatabases:
     """A SyncedDualDatabases wired to a real in-memory SQLite (so ORM events
     genuinely fire) and a faked-out MariaDB side (no real connection)."""
+    # The field lists are ClassVars, so they're narrowed on the class (and
+    # restored by monkeypatch afterwards) to keep the expected to_sync
+    # payloads in these tests small and independent of the shipped lists.
+    monkeypatch.setattr(
+        SyncedDualDatabases, "vault_entry_fields", ["service_name", "login"]
+    )
+    monkeypatch.setattr(SyncedDualDatabases, "standard_user_fields", ["username"])
     with patch(CREATE_ENGINE_TARGET, side_effect=_fake_create_engine):
         instance = SyncedDualDatabases(
             ":memory:",
@@ -32,10 +39,6 @@ def synced() -> SyncedDualDatabases:
             port=3306,
             database="passlair",
         )
-    # vault_entry_fields/standard_user_fields ship empty (# TODO in the
-    # source) -- a real caller is expected to configure which columns sync.
-    instance.vault_entry_fields = ["service_name", "login"]
-    instance.standard_user_fields = ["username", "email"]
     return instance
 
 
@@ -167,7 +170,6 @@ class TestPositive:
         with synced.sqlite.session() as session:
             user = StandardUser(
                 username="vronst",
-                email="vronst@example.com",
                 master_password=b"x" * 32,
                 salt=b"s" * 16,
                 dek=b"d" * 32,
@@ -181,7 +183,6 @@ class TestPositive:
         key = f"standard_user:{user_id}"
         assert synced.to_sync[key] == {
             "username": "vronst",
-            "email": "vronst@example.com",
         }
 
 

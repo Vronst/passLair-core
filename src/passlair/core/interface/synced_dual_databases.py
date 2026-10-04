@@ -29,7 +29,6 @@ class SyncedDualDatabases(BaseFacade):
     ]
     standard_user_fields: ClassVar[list[str]] = [
         "username",
-        "email",
         "master_password",
         "salt",
         "dek",

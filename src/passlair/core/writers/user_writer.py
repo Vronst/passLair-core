@@ -101,9 +101,7 @@ class UserWriter(BaseRepository):
         return new_phrase
 
     @classmethod
-    def prepare_new_user(
-        cls, username: str, email: str, password: str
-    ) -> tuple[UserCreation, str]:
+    def prepare_new_user(cls, username: str, password: str) -> tuple[UserCreation, str]:
         """
         Generates a fresh salt/DEK pair and hashes the password for a new
         account. Also generates a random backup KEK and wraps the same DEK
@@ -112,9 +110,9 @@ class UserWriter(BaseRepository):
         together with the backup phrase, which the caller must show the user
         exactly once.
         """
-        if username == "" or email == "" or password == "":
-            logger.warning("prepare_new_user: rejected empty username/email/password")
-            raise ValueError("Username, email and password must not be empty")
+        if username == "" or password == "":
+            logger.warning("prepare_new_user: rejected empty username/password")
+            raise ValueError("Username and password must not be empty")
 
         logger.debug("prepare_new_user: preparing data for username=%r", username)
         salt, hashed_password, kek = hash_new_password(password)
@@ -126,7 +124,6 @@ class UserWriter(BaseRepository):
 
         data = UserCreation(
             username=username,
-            email=email,
             master_password=hashed_password,
             salt=salt,
             dek=encrypted_dek,
@@ -152,24 +149,18 @@ class UserWriter(BaseRepository):
                 session.add(entry)
         except IntegrityError as e:
             if is_unique_violation(e):
-                match violation_names(e, "username", "email"):
+                match violation_names(e, "username"):
                     case "username":
                         logger.warning(
                             "save_user rejected: username=%r already exists",
                             data.username,
                         )
                         raise ValueError("Username already exists") from e
-                    case "email":
-                        logger.warning(
-                            "save_user rejected: email already in use for username=%r",
-                            data.username,
-                        )
-                        raise ValueError("Email already exists") from e
                     case _:
                         logger.warning(
                             "save_user rejected: uniqueness violation on an undetermined column"
                         )
-                        raise ValueError("Username or email already exists") from e
+                        raise ValueError("User already exists") from e
 
             # Not a uniqueness violation -- don't mislabel it as a duplicate.
             logger.exception(
