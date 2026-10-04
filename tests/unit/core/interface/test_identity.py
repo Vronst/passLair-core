@@ -131,13 +131,11 @@ class TestRegisterUser:
         prepared = object()
         user_writer.prepare_new_user.return_value = (prepared, "word " * 23 + "word")
 
-        result = identity.register_user("login", "email@example.com", "password")
+        result = identity.register_user("login", "password")
 
         assert result.success
         assert result.data["backup_phrase"] == "word " * 23 + "word"
-        user_writer.prepare_new_user.assert_called_once_with(
-            "login", "email@example.com", "password"
-        )
+        user_writer.prepare_new_user.assert_called_once_with("login", "password")
         user_writer.save_user.assert_called_once_with(prepared)
         manager.login.assert_called_once_with("login", "password")
 
@@ -146,7 +144,7 @@ class TestRegisterUser:
         user_writer.prepare_new_user.return_value = (object(), "irrelevant phrase")
         user_writer.save_user.side_effect = ValueError("Username already exists")
 
-        result = identity.register_user("login", "email@example.com", "password")
+        result = identity.register_user("login", "password")
 
         assert not result.success
         assert "Username already exists" in result.message

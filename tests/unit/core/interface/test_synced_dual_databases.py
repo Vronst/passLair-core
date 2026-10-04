@@ -35,7 +35,7 @@ def synced() -> SyncedDualDatabases:
     # vault_entry_fields/standard_user_fields ship empty (# TODO in the
     # source) -- a real caller is expected to configure which columns sync.
     instance.vault_entry_fields = ["service_name", "login"]
-    instance.standard_user_fields = ["username", "email"]
+    instance.standard_user_fields = ["username"]
     return instance
 
 
@@ -167,7 +167,6 @@ class TestPositive:
         with synced.sqlite.session() as session:
             user = StandardUser(
                 username="vronst",
-                email="vronst@example.com",
                 master_password=b"x" * 32,
                 salt=b"s" * 16,
                 dek=b"d" * 32,
@@ -181,7 +180,6 @@ class TestPositive:
         key = f"standard_user:{user_id}"
         assert synced.to_sync[key] == {
             "username": "vronst",
-            "email": "vronst@example.com",
         }
 
 
