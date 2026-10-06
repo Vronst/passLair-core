@@ -27,11 +27,37 @@ class UserWriter(BaseRepository):
     def __init__(self, user: AuthenticatedUser) -> None:
         self.user: AuthenticatedUser = AuthenticatedUser.require(user)
 
-    def change_password(self, new_password: str, old_password: str) -> None:
+    def _change_password(
+        self, dek: bytes, new_password: str, user: StandardUser, *, op: str
+    ) -> str:
+        salt, hashed_password, kek = hash_new_password(new_password)
+        enc_dek, dek_nonce = wrap_dek(dek, kek)
+
+        new_kek, new_phrase = new_backup_kek()
+        backup_dek, backup_dek_nonce = wrap_dek(dek, new_kek)
+
+        user.master_password = hashed_password
+        user.salt = salt
+        user.dek = enc_dek
+        user.dek_nonce = dek_nonce
+        user.backup_dek = backup_dek
+        user.backup_dek_nonce = backup_dek_nonce
+
+        with db.session() as session:
+            session.add(user)
+
+        logger.info("%s: password and backup phrase rotated for user_id=%r", op, user.id)
+
+        return new_phrase
+
+    def change_password(self, new_password: str, old_password: str) -> str:
         """
         Re-derives the KEK from the old password to decrypt the existing DEK,
         then re-encrypts that same DEK under a freshly derived KEK for the new
-        password, so previously-stored vault entries stay decryptable.
+        password, so previously-stored vault entries stay decryptable. Also
+        rotates the backup KEK, so the backup phrase the user was given
+        earlier stops working -- returns the new one so it can be shown to
+        the user exactly once.
         """
         if not (
             user := self._fetch_row(StandardUser, filters={"id": self.user.user_id})
@@ -48,18 +74,7 @@ class UserWriter(BaseRepository):
 
         dek = unwrap_dek(user.dek, user.dek_nonce, old_kek)
 
-        salt, hashed_password, kek = hash_new_password(new_password)
-        enc_dek, dek_nonce = wrap_dek(dek, kek)
-
-        user.master_password = hashed_password
-        user.salt = salt
-        user.dek = enc_dek
-        user.dek_nonce = dek_nonce
-
-        with db.session() as session:
-            session.add(user)
-
-        logger.info("change_password: password changed for user_id=%r", user.id)
+        return self._change_password(dek, new_password, user, op="change_password")
 
     def reset_password(
         self, username: str, new_password: str, backup_phrase: str
@@ -81,24 +96,7 @@ class UserWriter(BaseRepository):
         backup_kek = backup_kek_from_phrase(backup_phrase)
         dek = unwrap_dek(user.backup_dek, user.backup_dek_nonce, backup_kek)
 
-        salt, hashed_password, kek = hash_new_password(new_password)
-        enc_dek, dek_nonce = wrap_dek(dek, kek)
-
-        new_kek, new_phrase = new_backup_kek()
-        backup_dek, backup_dek_nonce = wrap_dek(dek, new_kek)
-
-        user.master_password = hashed_password
-        user.salt = salt
-        user.dek = enc_dek
-        user.dek_nonce = dek_nonce
-        user.backup_dek = backup_dek
-        user.backup_dek_nonce = backup_dek_nonce
-
-        with db.session() as session:
-            session.add(user)
-
-        logger.info("reset_password: reset via backup phrase for user_id=%r", user.id)
-        return new_phrase
+        return self._change_password(dek, new_password, user, op="reset_password")
 
     @classmethod
     def prepare_new_user(cls, username: str, password: str) -> tuple[UserCreation, str]:

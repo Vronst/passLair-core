@@ -69,7 +69,7 @@ class Identity(BaseFacade):
             return self._failure("Old password incorrect.")
 
         try:
-            self.user_writer.change_password(new_password, old_password)
+            backup_phrase = self.user_writer.change_password(new_password, old_password)
         except ValueError as e:
             logger.warning(
                 "change_user_password: failed for user_id=%r: %s",
@@ -82,7 +82,7 @@ class Identity(BaseFacade):
             "change_user_password: password changed for user_id=%r",
             self.manager.user_id,
         )
-        return self._success("Password was changed")
+        return self._success("Password was changed", {"backup_phrase": backup_phrase})
 
     def reset_user_password(
         self, username: str, backup_phrase: str, new_password: str

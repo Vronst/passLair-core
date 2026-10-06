@@ -124,7 +124,10 @@ class TestPositive:
         # Unit test of change_password()'s own wiring: mock every
         # credentials-module boundary call rather than depending on real
         # crypto succeeding -- that's covered by test_credentials.py and by
-        # the real change_password in test_identity.py.
+        # the real change_password in test_identity.py. change_password now
+        # shares _change_password with reset_password, so it also rotates
+        # the backup KEK/phrase -- same two wrap_dek calls as
+        # test_reset_password above.
         with (
             patch.object(UserWriter, "_fetch_row", return_value=mock_user),
             patch(
@@ -140,12 +143,20 @@ class TestPositive:
                 return_value=(b"new_salt", b"new_hash", b"new_kek"),
             ) as mock_hash,
             patch(
+                "passlair.core.writers.user_writer.new_backup_kek",
+                return_value=(b"new_backup_kek", "new backup phrase"),
+            ) as mock_new_backup_kek,
+            patch(
                 "passlair.core.writers.user_writer.wrap_dek",
-                return_value=(b"enc_dek", b"new_nonce"),
+                side_effect=[
+                    (b"enc_dek", b"dek_nonce"),
+                    (b"enc_backup_dek", b"backup_nonce"),
+                ],
             ) as mock_wrap,
         ):
-            writer.change_password("new_password", "old_password")
+            new_phrase = writer.change_password("new_password", "old_password")
 
+        assert new_phrase == "new backup phrase"
         mock_verify.assert_called_once_with(
             "old_password", original_salt, original_master_password
         )
@@ -153,11 +164,17 @@ class TestPositive:
             original_dek, original_dek_nonce, b"old_kek"
         )
         mock_hash.assert_called_once_with("new_password")
-        mock_wrap.assert_called_once_with(b"plain_dek", b"new_kek")
+        mock_new_backup_kek.assert_called_once()
+        assert mock_wrap.call_args_list == [
+            ((b"plain_dek", b"new_kek"),),
+            ((b"plain_dek", b"new_backup_kek"),),
+        ]
         assert mock_user.master_password == b"new_hash"
         assert mock_user.salt == b"new_salt"
         assert mock_user.dek == b"enc_dek"
-        assert mock_user.dek_nonce == b"new_nonce"
+        assert mock_user.dek_nonce == b"dek_nonce"
+        assert mock_user.backup_dek == b"enc_backup_dek"
+        assert mock_user.backup_dek_nonce == b"backup_nonce"
         mock_session.add.assert_called_once_with(mock_user)
         mock_session.commit.assert_called_once()
 

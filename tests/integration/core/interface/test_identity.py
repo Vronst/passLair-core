@@ -24,9 +24,14 @@ class TestPositive:
 
         before = UserReader.get_user_by_name(register_user["username"])
 
-        assert tested.change_user_password(
+        result = tested.change_user_password(
             new_password, register_user["password"]
-        ).success
+        )
+        assert result.success
+        new_backup_phrase = result.data["backup_phrase"]
+        assert isinstance(new_backup_phrase, str)
+        assert len(new_backup_phrase.split()) == 24
+        assert new_backup_phrase != register_user["backup_phrase"]
 
         # passlair_crypto's derive_keys is currently a mock that ignores its
         # inputs, so a changed password can't be proven to invalidate the old
@@ -37,6 +42,7 @@ class TestPositive:
         assert before is not None
         assert after.salt != before.salt
         assert after.dek_nonce != before.dek_nonce
+        assert after.backup_dek_nonce != before.backup_dek_nonce
 
         assert tested.logout().success
         assert tested.login(register_user["username"], new_password).success
