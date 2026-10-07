@@ -251,7 +251,7 @@ class TestNegative:
             patch.object(UserWriter, "_fetch_row", return_value=None),
             pytest.raises(ValueError, match="User doesn't exists"),
         ):
-            writer.change_password("new_password", "old_password")
+            _ = writer.change_password("new_password", "old_password")
 
     def test_change_password_wrong_old_password(
         self, mock_user: MagicMock, mock_user_manager: MagicMock
@@ -265,7 +265,7 @@ class TestNegative:
             ),
             pytest.raises(ValueError, match="Old password incorrect"),
         ):
-            writer.change_password("new_password", "old_password")
+            _ = writer.change_password("new_password", "old_password")
 
     def test_reset_password_user_not_found(self, mock_user_manager: MagicMock):
         writer = UserWriter(user=mock_user_manager)
