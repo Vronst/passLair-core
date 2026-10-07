@@ -5,6 +5,8 @@ from pytest_mock import MockerFixture
 
 from passlair.core.auth.user_manager import UserManager
 from passlair.core.readers.password_reader import PasswordReader
+from passlair.core.writers.password_writer import PasswordWriter
+from passlair.dataclasses.import_result import ImportResult
 from passlair.share.exporter import Exporter
 from passlair.share.importer import Importer
 
@@ -67,6 +69,44 @@ class TestPositive:
         entries = PasswordReader(manager).get_all_passwords()
         assert len(entries) == len(passwords)
         self.compare_vault(manager, passwords)
+
+    @pytest.mark.parametrize(
+        "fmt, suffix, password",
+        [
+            ("json", ".json", 'multi\nline, "quoted" / p=w'),
+            ("csv", ".csv", 'multi\nline, "quoted" / p=w'),
+            # txt is line-based, so it cannot carry a newline by design.
+            ("txt", ".txt", 'one line, "quoted" / p=w'),
+        ],
+    )
+    def test_round_trip_preserves_special_characters(
+        self,
+        register_user: dict[str, str],
+        register_user2: dict[str, str],
+        tmp_path: Path,
+        fmt: str,
+        suffix: str,
+        password: str,
+    ) -> None:
+        """Passwords with delimiters, quotes, and (where the format allows)
+        newlines must come back byte-for-byte, not silently altered."""
+        source_manager = UserManager()
+        assert source_manager.login(
+            register_user["username"], register_user["password"]
+        )
+        entry = {"service": 'svc, "x"', "login": 'me, "y"', "password": password}
+        PasswordWriter(source_manager).save_password(**entry)
+        out_file = tmp_path / f"export{suffix}"
+        Exporter(source_manager).export_to_file(str(out_file), fmt)
+
+        target_manager = UserManager()
+        assert target_manager.login(
+            register_user2["username"], register_user2["password"]
+        )
+        result = Importer(target_manager).import_from_file(str(out_file))
+
+        assert result == ImportResult(imported=1, skipped=0)
+        self.compare_vault(target_manager, [entry])
 
     def test_round_trip_json_clipboard(
         self,

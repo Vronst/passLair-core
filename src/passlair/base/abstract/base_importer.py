@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
 
+from ...dataclasses.import_result import ImportResult
+
 
 class BaseImporter(ABC):
     @abstractmethod
-    def import_from_file(self, path: str, fmt: str) -> None:
-        pass
-
-    @abstractmethod
-    def import_from_clipboard(self, fmt: str) -> None:
+    def import_text(self, content: str, fmt: str) -> ImportResult:
         pass
