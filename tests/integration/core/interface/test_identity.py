@@ -24,9 +24,7 @@ class TestPositive:
 
         before = UserReader.get_user_by_name(register_user["username"])
 
-        result = tested.change_user_password(
-            new_password, register_user["password"]
-        )
+        result = tested.change_user_password(new_password, register_user["password"])
         assert result.success
         new_backup_phrase = result.data["backup_phrase"]
         assert isinstance(new_backup_phrase, str)

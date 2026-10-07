@@ -20,6 +20,14 @@ class PasswordManager(BaseFacade):
         except (KeyError, RuntimeError, PermissionError) as e:
             return self._failure(str(e))
 
+    def delete_password(self, service: str) -> FacadeResult:
+        try:
+            self.pass_writer.delete_password(service)
+        except ValueError:
+            return self._failure("Deletion failed. Service not found.")
+
+        return self._success("Successfuly deleted the entry.")
+
     def list_services(self) -> FacadeResult:
         """Service names of every stored credential for the logged-in user.
         Nothing is decrypted."""

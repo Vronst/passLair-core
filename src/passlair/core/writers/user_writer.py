@@ -46,7 +46,9 @@ class UserWriter(BaseRepository):
         with db.session() as session:
             session.add(user)
 
-        logger.info("%s: password and backup phrase rotated for user_id=%r", op, user.id)
+        logger.info(
+            "%s: password and backup phrase rotated for user_id=%r", op, user.id
+        )
 
         return new_phrase
 
