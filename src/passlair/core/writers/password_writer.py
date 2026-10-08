@@ -35,7 +35,7 @@ class PasswordWriter(BaseRepository):
     def save_passwords(self, passwords: dict[str, dict[str, str]]) -> None:
         """Imports a batch of {service: {"login": ..., "password": ...}} entries
         for the logged-in user in a single transaction -- the same shape
-        Exporter._retrieve_passwords/export_to_json produce, so a round-trip
+        Exporter._retrieve_passwords/serialize("json") produce, so a round-trip
         needs no reshaping.
 
         For each entry: a new service is inserted; an existing service whose

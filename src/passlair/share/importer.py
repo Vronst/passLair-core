@@ -1,8 +1,6 @@
 import csv
 import io
 import logging
-import re
-from pathlib import Path
 from typing import override
 
 import pyperclip
@@ -12,23 +10,11 @@ from ..base.abstract.authenticated_user import AuthenticatedUser
 from ..base.abstract.base_importer import BaseImporter
 from ..core.writers.password_writer import PasswordWriter
 from ..dataclasses.import_result import ImportResult
+from .formats import CSV_COLUMNS, TXT_PATTERN, format_from_path, require_format
 
 logger = logging.getLogger(__name__)
 
 _PASSWORDS_ADAPTER = TypeAdapter(dict[str, dict[str, str]])
-
-# Matches one line in the format Exporter._export_txt writes:
-# "service=<name> / login=<login> / password=<password>". `.+?`/`.+`
-# (not `\w+`) so values may contain any character except a literal
-# newline. Matched with fullmatch() against one line at a time (see
-# _parse_txt), so this doesn't need its own start/end anchors.
-_TXT_PATTERN = re.compile(
-    r"service=(?P<service>.+?) / login=(?P<login>.+?) / password=(?P<password>.+)"
-)
-
-_FORMATS = ("txt", "json", "csv")
-
-_CSV_COLUMNS = ("service", "login", "password")
 
 type _Parsed = tuple[dict[str, dict[str, str]], int]
 
@@ -72,7 +58,7 @@ class Importer(BaseImporter):
     def import_from_file(self, path: str, fmt: str | None = None) -> ImportResult:
         """Imports the file at path; fmt defaults to the file's suffix."""
         if fmt is None:
-            fmt = Path(path).suffix.lower().removeprefix(".")
+            fmt = format_from_path(path)
 
         logger.info("import_from_file: importing %r as %s", path, fmt)
         # newline="" so CSV quoted fields keep their embedded line endings;
@@ -83,18 +69,14 @@ class Importer(BaseImporter):
         return self.import_text(content, fmt)
 
     def _parse(self, content: str, fmt: str) -> _Parsed:
+        require_format(fmt)
         match fmt:
             case "json":
                 return self._parse_json(content)
             case "txt":
                 return self._parse_txt(content)
-            case "csv":
-                return self._parse_csv(content)
             case _:
-                logger.error("_parse: unrecognized format %r", fmt)
-                raise ValueError(
-                    f"Unrecognized format {fmt!r}. Choose {'/'.join(_FORMATS)}."
-                )
+                return self._parse_csv(content)
 
     def _save_passwords(self, data: dict[str, dict[str, str]]) -> None:
         """Hands parsed {service: {"login": ..., "password": ...}} entries
@@ -133,7 +115,7 @@ class Importer(BaseImporter):
             if not line.strip():
                 continue
 
-            match = _TXT_PATTERN.fullmatch(line)
+            match = TXT_PATTERN.fullmatch(line)
             if match is None:
                 # Line number only: an unparsable line is usually a real
                 # credential with a typo, so its text holds a plaintext password.
@@ -166,7 +148,7 @@ class Importer(BaseImporter):
             if service is None or login is None or password is None:
                 # Column names, never the row: its values are plaintext
                 # credentials, possibly shifted into the wrong column.
-                missing = [name for name in _CSV_COLUMNS if row.get(name) is None]
+                missing = [name for name in CSV_COLUMNS if row.get(name) is None]
                 logger.warning(
                     "_parse_csv: skipping malformed row %d, missing %s",
                     row_number,

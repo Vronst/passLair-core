@@ -1,208 +1,184 @@
 import csv
+import io
 import json
+import stat
 from pathlib import Path
 
 import pytest
 from pytest_mock import MockerFixture
 
 from passlair.core.auth.user_manager import UserManager
+from passlair.core.writers.password_writer import PasswordWriter
 from passlair.share.exporter import Exporter
+
+type Vault = dict[str, dict[str, str]]
+
+
+def as_vault(passwords: list[dict[str, str]]) -> Vault:
+    return {
+        p["service"]: {"login": p["login"], "password": p["password"]}
+        for p in passwords
+    }
+
+
+def parse_csv(text: str) -> Vault:
+    rows = csv.DictReader(io.StringIO(text, newline=""))
+    return as_vault(list(rows))
+
+
+def parse_txt(text: str) -> list[str]:
+    return text.splitlines()
+
+
+@pytest.fixture
+def exporter(
+    user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
+) -> Exporter:
+    return Exporter(user_manager_with_passwords[0])
+
+
+@pytest.fixture
+def expected(
+    user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
+) -> Vault:
+    return as_vault(user_manager_with_passwords[1])
+
+
+@pytest.fixture
+def empty_exporter(register_user2: dict[str, str]) -> Exporter:
+    user_manager = UserManager()
+    assert user_manager.login(register_user2["username"], register_user2["password"])
+    return Exporter(user_manager)
 
 
 class TestPositive:
-    def compare_output(
-        self, output: dict[str, dict[str, str]], passwords: list[dict[str, str]]
+    def test_retrieve_passwords_decrypts_every_entry(
+        self, exporter: Exporter, expected: Vault
     ) -> None:
-        for credentials in passwords:
-            service = credentials["service"]
-            expected_login = credentials["login"]
-            expected_password = credentials["password"]
+        assert exporter._retrieve_passwords() == expected
 
-            assert service in output
-            assert isinstance(output[service], dict)
-            assert output[service]["login"] == expected_login
-            assert output[service]["password"] == expected_password
+    def test_serialize_json(self, exporter: Exporter, expected: Vault) -> None:
+        assert json.loads(exporter.serialize("json")) == expected
 
-    def test_exporter_retrieve_passwords(
-        self, user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]]
+    def test_serialize_csv(self, exporter: Exporter, expected: Vault) -> None:
+        text = exporter.serialize("csv")
+
+        assert text.startswith("service,login,password\r\n")
+        assert parse_csv(text) == expected
+
+    def test_serialize_txt_writes_one_line_per_entry(
+        self, exporter: Exporter, expected: Vault
     ) -> None:
-        user_manager, passwords = user_manager_with_passwords
-        exporter = Exporter(user_manager)
-        output = exporter._retrieve_passwords()
-        assert output is not None
-        assert isinstance(output, dict)
+        lines = parse_txt(exporter.serialize("txt"))
 
-        self.compare_output(output, passwords)
+        assert sorted(lines) == sorted(
+            f"service={s} / login={c['login']} / password={c['password']}"
+            for s, c in expected.items()
+        )
 
-    def test_exporter_export_to_txt(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        tmp_path: Path,
+    def test_serialize_csv_quotes_newline_comma_and_quote(
+        self, register_user: dict[str, str]
     ) -> None:
-        user_manager, passwords = user_manager_with_passwords
-        exporter = Exporter(user_manager)
+        manager = UserManager()
+        assert manager.login(register_user["username"], register_user["password"])
+        password = 'multi\nline, "quoted"'
+        PasswordWriter(manager).save_password("svc", "me", password)
+
+        text = Exporter(manager).serialize("csv")
+
+        assert parse_csv(text) == {"svc": {"login": "me", "password": password}}
+
+    @pytest.mark.parametrize("suffix", [".txt", ".json", ".csv", ".CSV"])
+    def test_export_to_file_infers_format_from_suffix(
+        self, exporter: Exporter, tmp_path: Path, suffix: str
+    ) -> None:
+        out_file = tmp_path / f"export{suffix}"
+
+        exporter.export_to_file(str(out_file))
+
+        fmt = suffix.lower().removeprefix(".")
+        # read_bytes, not read_text: CSV's \r\n must reach disk untranslated.
+        assert out_file.read_bytes() == exporter.serialize(fmt).encode()
+
+    def test_export_to_file_explicit_format_overrides_suffix(
+        self, exporter: Exporter, expected: Vault, tmp_path: Path
+    ) -> None:
         out_file = tmp_path / "export.txt"
 
-        exporter.export_to_txt(str(out_file))
+        exporter.export_to_file(str(out_file), "json")
 
-        content = out_file.read_text()
-        for credentials in passwords:
-            assert credentials["service"] in content
-            assert credentials["login"] in content
-            assert credentials["password"] in content
+        assert json.loads(out_file.read_text()) == expected
 
-    def test_exporter_export_to_csv(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        tmp_path: Path,
+    def test_export_to_file_is_readable_by_owner_only(
+        self, exporter: Exporter, tmp_path: Path
     ) -> None:
-        user_manager, passwords = user_manager_with_passwords
-        exporter = Exporter(user_manager)
-        out_file = tmp_path / "export.csv"
-
-        exporter.export_to_csv(str(out_file))
-
-        with out_file.open(newline="") as fh:
-            rows = list(csv.DictReader(fh))
-        output = {
-            row["service"]: {"login": row["login"], "password": row["password"]}
-            for row in rows
-        }
-        self.compare_output(output, passwords)
-
-    def test_exporter_export_to_json(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        tmp_path: Path,
-    ) -> None:
-        user_manager, passwords = user_manager_with_passwords
-        exporter = Exporter(user_manager)
         out_file = tmp_path / "export.json"
 
-        exporter.export_to_json(str(out_file))
+        exporter.export_to_file(str(out_file))
 
-        output = json.loads(out_file.read_text())
-        self.compare_output(output, passwords)
+        assert stat.S_IMODE(out_file.stat().st_mode) == 0o600
+
+    @pytest.mark.parametrize("fmt", ["txt", "json", "csv"])
+    def test_export_to_clipboard_copies_serialized_text(
+        self, exporter: Exporter, mocker: MockerFixture, fmt: str
+    ) -> None:
+        copy = mocker.patch("passlair.share.exporter.pyperclip.copy")
+
+        exporter.export_to_clipboard(fmt)
+
+        copy.assert_called_once_with(exporter.serialize(fmt))
 
     @pytest.mark.parametrize(
-        "fmt, suffix",
-        [("txt", ".txt"), ("csv", ".csv"), ("json", ".json")],
+        "fmt, text",
+        [("json", "{}"), ("csv", "service,login,password\r\n"), ("txt", "")],
     )
-    def test_exporter_export_to_file_dispatches_by_format(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        tmp_path: Path,
-        fmt: str,
-        suffix: str,
+    def test_serialize_empty_vault(
+        self, empty_exporter: Exporter, fmt: str, text: str
     ) -> None:
-        user_manager, _ = user_manager_with_passwords
-        exporter = Exporter(user_manager)
-        direct_file = tmp_path / f"direct{suffix}"
-        dispatched_file = tmp_path / f"dispatched{suffix}"
-
-        getattr(exporter, f"export_to_{fmt}")(str(direct_file))
-        exporter.export_to_file(str(dispatched_file), fmt)
-
-        assert dispatched_file.read_text() == direct_file.read_text()
-
-    def export_to_clipboard(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        mocker: MockerFixture,
-        fmt: str,
-    ) -> tuple[list[dict[str, str]], str]:
-        user_manager, passwords = user_manager_with_passwords
-        copy = mocker.patch("passlair.share.exporter.pyperclip.copy")
-        exporter = Exporter(user_manager)
-
-        exporter.export_to_clipboard(fmt=fmt)
-
-        copy.assert_called_once()
-        return passwords, copy.call_args.args[0]
-
-    def test_exporter_export_to_clipboard_txt(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        mocker: MockerFixture,
-    ) -> None:
-        passwords, copied = self.export_to_clipboard(
-            user_manager_with_passwords, mocker, "txt"
-        )
-        for credentials in passwords:
-            assert credentials["service"] in copied
-            assert credentials["login"] in copied
-            assert credentials["password"] in copied
-
-    def test_exporter_export_to_clipboard_json(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        mocker: MockerFixture,
-    ) -> None:
-        passwords, copied = self.export_to_clipboard(
-            user_manager_with_passwords, mocker, "json"
-        )
-        output = json.loads(copied)
-        self.compare_output(output, passwords)
+        assert empty_exporter.serialize(fmt) == text
 
 
 class TestNegative:
-    def make_exporter_for_empty_vault(self, register_user2: dict[str, str]) -> Exporter:
-        user_manager = UserManager()
-        assert user_manager.login(
-            register_user2["username"], register_user2["password"]
-        )
-        return Exporter(user_manager)
-
-    def test_exporter_retrieve_passwords(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        register_user2: dict[str, str],
+    def test_serialize_rejects_unknown_format_before_decrypting(
+        self, exporter: Exporter, mocker: MockerFixture
     ) -> None:
-        exporter = self.make_exporter_for_empty_vault(register_user2)
+        retrieve = mocker.patch.object(Exporter, "_retrieve_passwords")
 
-        output = exporter._retrieve_passwords()
-        assert output is not None
-        assert isinstance(output, dict)
-        assert not output
+        with pytest.raises(ValueError, match="Unrecognized format 'xml'"):
+            _ = exporter.serialize("xml")
 
-    @pytest.mark.parametrize("fmt, suffix", [("txt", ".txt"), ("json", ".json")])
-    def test_exporter_export_empty_vault(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        register_user2: dict[str, str],
-        tmp_path: Path,
-        fmt: str,
-        suffix: str,
+        retrieve.assert_not_called()
+
+    @pytest.mark.parametrize("name", ["export.xml", "export", "export.json.bak"])
+    def test_export_to_file_rejects_unknown_suffix_without_creating_file(
+        self, exporter: Exporter, tmp_path: Path, name: str
     ) -> None:
-        exporter = self.make_exporter_for_empty_vault(register_user2)
-        out_file = tmp_path / f"export{suffix}"
+        out_file = tmp_path / name
 
-        getattr(exporter, f"export_to_{fmt}")(str(out_file))
+        with pytest.raises(ValueError, match="Unrecognized format"):
+            exporter.export_to_file(str(out_file))
 
-        content = out_file.read_text()
-        if fmt == "json":
-            assert json.loads(content) == {}
-        else:
-            assert content.strip() == ""
+        assert not out_file.exists()
 
-    def test_exporter_export_to_file_rejects_unknown_format(
-        self,
-        user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
-        tmp_path: Path,
+    @pytest.mark.parametrize("value", ["a\nb", "a\r", "a b", "a\x0c"])
+    def test_serialize_txt_refuses_values_with_line_breaks(
+        self, register_user: dict[str, str], value: str
     ) -> None:
-        user_manager, _ = user_manager_with_passwords
-        exporter = Exporter(user_manager)
+        """txt is one entry per line; a line break would split the entry and
+        the importer would skip both halves."""
+        manager = UserManager()
+        assert manager.login(register_user["username"], register_user["password"])
+        PasswordWriter(manager).save_password("svc", "me", value)
 
-        with pytest.raises(ValueError):
-            exporter.export_to_file(str(tmp_path / "export.xml"), "xml")
+        with pytest.raises(ValueError, match="line break"):
+            _ = Exporter(manager).serialize("txt")
 
-    def test_exporter_retrieve_passwords_without_active_session(
+    def test_retrieve_passwords_without_active_session(
         self,
         user_manager_with_passwords: tuple[UserManager, list[dict[str, str]]],
     ) -> None:
         user_manager, _ = user_manager_with_passwords
         user_manager.logout()
-        exporter = Exporter(user_manager)
 
         with pytest.raises(PermissionError):
-            _ = exporter._retrieve_passwords()
+            _ = Exporter(user_manager)._retrieve_passwords()
