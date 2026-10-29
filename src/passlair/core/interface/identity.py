@@ -24,6 +24,17 @@ class Identity(BaseFacade):
         self.manager: UserManager = user_manager or UserManager()
         self.user_writer: UserWriter = user_writer or UserWriter(self.manager)
 
+    def restore_session(self, user_id: str, dek: bytes) -> FacadeResult:
+        """
+        Allows to restore user session without keeping user password.
+        Still
+        NOT SAFE when used by user (user may try to guess others DEK)
+
+        --- Added in 0.4.0 ---
+        """
+        self.manager.login_by_dek(user_id, dek)
+        return self._success(f"Loged by DEK for user {user_id}. BE CAREFUL")
+
     @property
     def login_status(self) -> FacadeResult:
         if self.manager.login_status:

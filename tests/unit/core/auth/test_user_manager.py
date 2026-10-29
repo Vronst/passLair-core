@@ -99,6 +99,14 @@ class TestPositive:
             password, mock_user.salt, mock_user.master_password
         )
 
+    def test_login_by_DEK(self):
+        manager = UserManager()
+        manager.login_by_dek(1, b'123')
+
+        assert manager.user_id
+        assert manager.get_session_key()
+        assert manager.login_status
+
 
 class TestNegative:
     def test_assign_user_id_manually(self):

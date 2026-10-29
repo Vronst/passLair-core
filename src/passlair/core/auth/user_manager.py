@@ -23,6 +23,23 @@ class UserManager(AuthenticatedUser):
     def login_status(self) -> bool:
         return bool(self.__dek and self.__user_id)
 
+    def login_by_dek(self, user_id: str, dek: bytes) -> None:
+        """
+        Allows to bypass userpasword, but does not verify if data is correct.
+
+        If data is invalid, then no password will decrypted.
+
+        DO NOT USE for standard login - user can try to login as other user.
+
+        --- Added in 0.4.0 ---
+        """
+        self.__dek = dek
+        self.__user_id = user_id
+        logger.info(
+            "login: Loged by DEK to user_id=%r",
+            self.user_id,
+        )
+
     def login(self, username: str, password: str) -> bool:
         """
         Validates user credentials and sets up the temporary session key.
