@@ -1,7 +1,7 @@
 import csv
 import io
 import logging
-from typing import override
+from typing import TypedDict, cast, override
 
 import pyperclip
 from pydantic import TypeAdapter, ValidationError
@@ -14,7 +14,15 @@ from .formats import CSV_COLUMNS, TXT_PATTERN, format_from_path, require_format
 
 logger = logging.getLogger(__name__)
 
-_PASSWORDS_ADAPTER = TypeAdapter(dict[str, dict[str, str]])
+
+class _Credentials(TypedDict):
+    """Both keys are required: PasswordWriter reads them unconditionally."""
+
+    login: str
+    password: str
+
+
+_PASSWORDS_ADAPTER = TypeAdapter(dict[str, _Credentials])
 
 type _Parsed = tuple[dict[str, dict[str, str]], int]
 
@@ -91,7 +99,9 @@ class Importer(BaseImporter):
 
     def _parse_json(self, content: str) -> _Parsed:
         try:
-            return _PASSWORDS_ADAPTER.validate_json(content), 0
+            # A validated TypedDict is a plain dict of str at runtime.
+            passwords = _PASSWORDS_ADAPTER.validate_json(content)
+            return cast(dict[str, dict[str, str]], passwords), 0
         except ValidationError as err:
             # include_input=False: pydantic's default str(err) and
             # traceback quote the offending values -- plaintext passwords.

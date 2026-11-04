@@ -101,7 +101,7 @@ class TestPositive:
 
     def test_login_by_DEK(self):
         manager = UserManager()
-        manager.login_by_dek(1, b'123')
+        manager.login_by_dek(1, b"123")
 
         assert manager.user_id
         assert manager.get_session_key()
