@@ -198,7 +198,17 @@ class TestNegative:
         mock_save.assert_not_called()
 
     @pytest.mark.parametrize(
-        "content", [json.dumps(["not", "a", "dict"]), json.dumps({"a": "b"}), "{"]
+        "content",
+        [
+            json.dumps(["not", "a", "dict"]),
+            json.dumps({"a": "b"}),
+            "{",
+            json.dumps({"a": {"login": "me"}}),
+            json.dumps({"a": {"password": "pw"}}),
+            json.dumps({"a": {"username": "me", "password": "pw"}}),
+            json.dumps({"a": {"Login": "me", "Password": "pw"}}),
+            json.dumps({"a": {}}),
+        ],
     )
     def test_import_text_rejects_malformed_json(
         self, importer: Importer, mock_save: MagicMock, content: str
